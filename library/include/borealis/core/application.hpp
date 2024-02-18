@@ -364,6 +364,8 @@ class Application
 
     static void tryDeinitFirstResponder(View* view);
 
+    inline static std::vector<TouchState> currentTouchState;
+
     static void addToWatchedKeys(const BrlsKeyCombination key);
 
     static void removeWatchedKeys(const BrlsKeyCombination key);
@@ -387,7 +389,6 @@ class Application
     inline static std::deque<View*> deletionPool;
 
     inline static View* currentFocus = nullptr;
-    inline static std::vector<TouchState> currentTouchState;
     inline static MouseState currentMouseState;
     inline static NotificationManager* notificationManager;
 
