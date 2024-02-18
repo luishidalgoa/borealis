@@ -308,6 +308,8 @@ class Application
 
     static void tryDeinitFirstResponder(View* view);
 
+    inline static std::vector<TouchState> currentTouchState;
+
   private:
     inline static bool inited               = false;
     inline static bool quitRequested        = false;
@@ -327,7 +329,6 @@ class Application
     inline static std::deque<View*> deletionPool;
 
     inline static View* currentFocus = nullptr;
-    inline static std::vector<TouchState> currentTouchState;
     inline static MouseState currentMouseState;
 
     // Return true if input type was changed
