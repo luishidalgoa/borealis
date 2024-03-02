@@ -253,6 +253,8 @@ class Platform
      */
     virtual void openBrowser(std::string url) = 0;
 
+    virtual std::string getHomeDirectory(std::string appName = "") = 0;
+
     /**
      * Selects and returns the best platform.
      */
