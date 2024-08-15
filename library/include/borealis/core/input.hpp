@@ -315,6 +315,10 @@ class InputManager
 
     virtual short getControllersConnectedCount() = 0;
 
+    virtual void connectVirtualController() = 0;
+
+    virtual void disconnectVirtualController() = 0;
+
     virtual void updateUnifiedControllerState(ControllerState* state) = 0;
     /**
      * Called once every frame to fill the given ControllerState struct with the controller state.

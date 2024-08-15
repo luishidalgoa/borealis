@@ -17,6 +17,10 @@ class SDLInputManager : public InputManager
 
     short getControllersConnectedCount() override;
 
+    void connectVirtualController() override;
+
+    void disconnectVirtualController() override;
+
     void updateUnifiedControllerState(ControllerState* state) override;
 
     void updateControllerState(ControllerState* state, int controller) override;

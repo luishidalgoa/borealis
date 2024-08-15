@@ -1,5 +1,6 @@
 #import <borealis/core/logger.hpp>
 #import <borealis/platforms/desktop/desktop_platform.hpp>
+#import <GameController/GameController.h>
 #import <UIKit/UIKit.h>
 
 namespace brls {
@@ -34,3 +35,29 @@ float ios_battery() {
 #endif
 }
 };
+
+
+#if defined(IOS)
+void ios_connectVirtualController() {
+    if (@available(iOS 15.0, *)) {
+        auto config = [[GCVirtualControllerConfiguration alloc] init];
+        config.elements = [NSSet setWithObjects: 
+//                           GCInputDirectionPad,
+                           GCInputLeftThumbstick,
+                           GCInputRightThumbstick,
+                           GCInputLeftTrigger,
+                           GCInputRightTrigger,
+                           GCInputButtonA,
+                           GCInputButtonB,
+                           GCInputButtonX,
+                           GCInputButtonY,
+                           nil];
+        auto controller = [[GCVirtualController alloc] initWithConfiguration: config];
+        [controller connectWithReplyHandler: NULL];
+    } else { }
+}
+
+void ios_disconnectVirtualController() {
+
+}
+#endif

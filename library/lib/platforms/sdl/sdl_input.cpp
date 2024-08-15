@@ -19,6 +19,11 @@
 #include <borealis/core/logger.hpp>
 #include <borealis/platforms/sdl/sdl_input.hpp>
 
+#if defined(IOS)
+extern void ios_connectVirtualController();
+extern void ios_disconnectVirtualController();
+#endif
+
 namespace brls
 {
 
@@ -314,6 +319,22 @@ SDLInputManager::~SDLInputManager()
 short SDLInputManager::getControllersConnectedCount()
 {
     return controllers.size();
+}
+
+void SDLInputManager::connectVirtualController()
+{
+#if defined(IOS)
+    ios_connectVirtualController();
+#endif
+}
+
+
+void SDLInputManager::disconnectVirtualController()
+{
+
+#if defined(IOS)
+    ios_disconnectVirtualController();
+#endif
 }
 
 void SDLInputManager::updateUnifiedControllerState(ControllerState* state)
