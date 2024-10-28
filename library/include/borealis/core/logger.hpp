@@ -48,7 +48,7 @@ enum class LogLevel
     LOG_VERBOSE
 };
 
-#ifdef IOS
+#ifdef PLATFORM_APPLE
 #define BRLS_ERROR_COLOR "🔴"
 #define BRLS_WARNING_COLOR "🟠"
 #define BRLS_INFO_COLOR "🔵"
@@ -99,7 +99,7 @@ class Logger
 
         try
         {
-#ifdef IOS
+#ifdef PLATFORM_APPLE
             fmt::print(logOut, "{:%H:%M:%S}.{:03d} {} {}\n", time_tm, (int)ms, color, log);
 #elif defined(ANDROID)
             __android_log_print(6 - (int)level, "borealis", "%02d:%02d:%02d.%03d %s\n", time_tm.tm_hour, time_tm.tm_min, time_tm.tm_sec, (int)ms, log.c_str());
