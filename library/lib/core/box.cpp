@@ -22,6 +22,7 @@
 #include <borealis/core/util.hpp>
 #include <cmath>
 #include <fstream>
+#include <functional>
 
 namespace brls
 {
@@ -474,18 +475,20 @@ std::vector<View*>& Box::getChildren()
 void Box::inflateFromXMLString(std::string_view xml)
 {
     // Load XML
-    tinyxml2::XMLDocument* document = new tinyxml2::XMLDocument();
-    tinyxml2::XMLError error        = document->Parse(xml.data());
-
-    this->bindXMLDocument(document);
-
-    if (error != tinyxml2::XMLError::XML_SUCCESS)
-        fatal("Invalid XML when inflating " + this->describe() + ": error " + std::to_string(error));
-
+    std::shared_ptr<tinyxml2::XMLDocument> document = getXMLCache(xml);
     tinyxml2::XMLElement* element = document->RootElement();
 
-    if (!element)
-        fatal("Invalid XML: no element found");
+    if (!element) {
+        tinyxml2::XMLError error = document->Parse(xml.data());
+
+        if (error != tinyxml2::XMLError::XML_SUCCESS)
+            fatal("Invalid XML when inflating " + this->describe() + ": error " + std::to_string(error));
+
+        element = document->RootElement();
+
+        if (!element)
+            fatal("Invalid XML: no element found");
+    }
 
     return Box::inflateFromXMLElement(element);
 }
@@ -508,18 +511,20 @@ void Box::inflateFromXMLRes(const std::string& name)
 void Box::inflateFromXMLFile(const std::string& path)
 {
     // Load XML
-    tinyxml2::XMLDocument* document = new tinyxml2::XMLDocument();
-    tinyxml2::XMLError error        = document->LoadFile(path.c_str());
-
-    this->bindXMLDocument(document);
-
-    if (error != tinyxml2::XMLError::XML_SUCCESS)
-        fatal("Invalid XML when inflating " + this->describe() + ": error " + std::to_string(error));
-
+    std::shared_ptr<tinyxml2::XMLDocument> document = getXMLCache(path);
     tinyxml2::XMLElement* element = document->RootElement();
 
-    if (!element)
-        fatal("Invalid XML: no element found");
+    if (!element) {
+        tinyxml2::XMLError error = document->LoadFile(path.c_str());
+
+        if (error != tinyxml2::XMLError::XML_SUCCESS)
+            fatal("Invalid XML when inflating " + this->describe() + ": error " + std::to_string(error));
+
+        element = document->RootElement();
+
+        if (!element)
+            fatal("Invalid XML: no element found");
+    }
 
     return Box::inflateFromXMLElement(element);
 }

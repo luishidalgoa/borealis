@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <sstream>
+#include <functional>
 #include <borealis/core/animation.hpp>
 #include <borealis/core/application.hpp>
 #include <borealis/core/box.hpp>
@@ -1426,9 +1427,6 @@ View::~View()
     if (Application::getCurrentFocus() == this)
         Application::giveFocus(nullptr);
 
-    for (tinyxml2::XMLDocument* document : this->boundDocuments)
-        delete document;
-
     Application::tryDeinitFirstResponder(this);
     for (GestureRecognizer* recognizer : this->gestureRecognizers)
         delete recognizer;
@@ -1746,37 +1744,43 @@ View* View::createFromXMLResource(std::string name)
 
 View* View::createFromXMLString(std::string_view xml)
 {
-    tinyxml2::XMLDocument* document = new tinyxml2::XMLDocument();
-    tinyxml2::XMLError error        = document->Parse(xml.data());
+    std::shared_ptr<tinyxml2::XMLDocument> document = getXMLCache(xml);
+    tinyxml2::XMLElement* element = document->RootElement();
 
-    if (error != tinyxml2::XMLError::XML_SUCCESS)
-        fatal("Invalid XML when creating View from XML: error " + std::to_string(error));
+    if (!element) {
+        tinyxml2::XMLError error = document->Parse(xml.data());
 
-    tinyxml2::XMLElement* root = document->RootElement();
+        if (error != tinyxml2::XMLError::XML_SUCCESS)
+            fatal("Invalid XML when creating View from XML: error " + std::to_string(error));
 
-    if (!root)
-        fatal("Invalid XML: no element found");
+        element = document->RootElement();
 
-    View* view = View::createFromXMLElement(root);
-    view->bindXMLDocument(document);
+        if (!element)
+            fatal("Invalid XML: no element found");
+    }
+
+    View* view = View::createFromXMLElement(element);
     return view;
 }
 
 View* View::createFromXMLFile(std::string path)
 {
-    tinyxml2::XMLDocument* document = new tinyxml2::XMLDocument();
-    tinyxml2::XMLError error        = document->LoadFile(path.c_str());
-
-    if (error != tinyxml2::XMLError::XML_SUCCESS)
-        fatal("Unable to load XML file \"" + path + "\": error " + std::to_string(error));
-
+    std::shared_ptr<tinyxml2::XMLDocument> document = getXMLCache(path);
     tinyxml2::XMLElement* element = document->RootElement();
 
-    if (!element)
-        fatal("Unable to load XML file \"" + path + "\": no root element found, is the file empty?");
+    if (!element) {
+        tinyxml2::XMLError error = document->LoadFile(path.c_str());
+
+        if (error != tinyxml2::XMLError::XML_SUCCESS)
+            fatal("Unable to load XML file \"" + path + "\": error " + std::to_string(error));
+
+        element = document->RootElement();
+
+        if (!element)
+            fatal("Unable to load XML file \"" + path + "\": no root element found, is the file empty?");
+    }
 
     View* view = View::createFromXMLElement(element);
-    view->bindXMLDocument(document);
     return view;
 }
 
@@ -2380,9 +2384,14 @@ View* View::hitTest(Point point)
     return nullptr;
 }
 
-void View::bindXMLDocument(tinyxml2::XMLDocument* document)
+std::shared_ptr<tinyxml2::XMLDocument> View::getXMLCache(std::string_view path)
 {
-    this->boundDocuments.push_back(document);
+    static std::unordered_map<size_t, std::shared_ptr<tinyxml2::XMLDocument>> xmlCache;
+    const size_t hash = std::hash<std::string>{}(path.data());
+    if (xmlCache.count(hash) == 0) {
+        xmlCache[hash] = std::make_shared<tinyxml2::XMLDocument>();
+    }
+    return xmlCache[hash];
 }
 
 void View::setWireframeEnabled(bool wireframe)

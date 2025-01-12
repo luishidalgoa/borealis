@@ -287,8 +287,6 @@ class View
 
     float aspectRatio = 0;
 
-    std::vector<tinyxml2::XMLDocument*> boundDocuments;
-
     std::unordered_map<std::string, AutoAttributeHandler> autoAttributes;
     std::unordered_map<std::string, FloatAttributeHandler> percentageAttributes;
     std::unordered_map<std::string, FloatAttributeHandler> floatAttributes;
@@ -1082,10 +1080,9 @@ class View
     void registerFilePathXMLAttribute(std::string name, FilePathAttributeHandler handler);
 
     /**
-     * Binds the given XML document to the view for ownership. The
-     * document will then be deleted when the view is.
+     * Get the XML document for the XML file, creating a new one if none is cached.
      */
-    void bindXMLDocument(tinyxml2::XMLDocument* document);
+    static std::shared_ptr<tinyxml2::XMLDocument> getXMLCache(std::string_view path);
 
     /**
      * Returns if the given XML attribute name is valid for that view.
