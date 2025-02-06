@@ -17,7 +17,11 @@
 */
 
 #include <math.h>
-
+#ifndef _MSC_VER
+#include <cxxabi.h>
+#endif
+#include <tinyxml2.h>
+#include <yoga/YGNode.h>
 #include <algorithm>
 #include <sstream>
 #include <functional>
@@ -110,6 +114,11 @@ NVGpaint View::a(NVGpaint paint)
     newPaint.innerColor.a *= this->getAlpha();
     newPaint.outerColor.a *= this->getAlpha();
     return newPaint;
+}
+
+const std::vector<GestureRecognizer*>& View::getGestureRecognizers()
+{
+    return this->gestureRecognizers;
 }
 
 void View::interruptGestures(bool onlyIfUnsureState)
@@ -253,6 +262,42 @@ void View::playClickAnimation(bool reverse, bool animateBack, bool force)
     });
 
     this->clickAlpha.start();
+}
+
+std::string View::getClassString() const
+{
+    // Taken from: https://stackoverflow.com/questions/281818/unmangling-the-result-of-stdtype-infoname/4541470#4541470
+    const char* name = typeid(*this).name();
+#ifndef _MSC_VER
+    int status       = 0;
+    std::unique_ptr<char, void (*)(void*)> res {
+            abi::__cxa_demangle(name, NULL, NULL, &status),
+            std::free
+    };
+    return (status == 0) ? res.get() : name;
+#else
+    return name;
+#endif
+}
+
+std::string View::describe() const
+{
+    std::string classString = this->getClassString();
+
+    if (this->id != "")
+        return classString + " (id=\"" + this->id + "\")";
+
+    return classString;
+}
+
+YGNode* View::getYGNode()
+{
+    return this->ygNode;
+}
+
+const std::vector<Action>& View::getActions()
+{
+    return this->actions;
 }
 
 void View::drawClickAnimation(NVGcontext* vg, FrameContext* ctx, Rect frame)
@@ -1361,6 +1406,19 @@ bool View::isHidden()
 void View::overrideTheme(Theme* newTheme)
 {
     this->themeOverride = newTheme;
+}
+
+void View::setAspectRatio(float value)
+{
+    if(value <= 0) return;
+    this->aspectRatio = value;
+    YGNodeStyleSetAspectRatio(this->ygNode, value);
+    this->invalidate();
+}
+
+float View::getAspectRatio()
+{
+    return this->aspectRatio;
 }
 
 void View::onParentFocusGained(View* focusedView)

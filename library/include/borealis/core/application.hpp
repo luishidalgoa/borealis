@@ -18,9 +18,6 @@
 
 #pragma once
 
-#include <nanovg.h>
-#include <tinyxml2.h>
-
 #include <borealis/core/activity.hpp>
 #include <borealis/core/audio.hpp>
 #include <borealis/core/font.hpp>

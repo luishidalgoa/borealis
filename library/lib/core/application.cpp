@@ -19,6 +19,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <yoga/YGNode.h>
 #include <yoga/event/event.h>
 
 #include <algorithm>
