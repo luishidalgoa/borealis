@@ -220,7 +220,7 @@ GLFWVideoContext::GLFWVideoContext(const std::string& windowTitle, uint32_t wind
 #if defined(__APPLE__) || defined(__linux__) || defined(_WIN32)
     // If the window appears outside the screen, using the default settings
     GLFWmonitor* monitor = nullptr;
-    if (!isnan(windowX) && !isnan(windowY))
+    if (!std::isnan(windowX) && !std::isnan(windowY))
         monitor = getAvailableMonitor(VideoContext::monitorIndex, (int)windowX, (int)windowY, (int)windowWidth, (int)windowHeight);
 
     if (monitor == nullptr)
@@ -294,7 +294,7 @@ GLFWVideoContext::GLFWVideoContext(const std::string& windowTitle, uint32_t wind
     {
         if (mode->width >= (int)windowWidth && mode->height >= (int)windowHeight)
         {
-            if (!isnan(windowX) && !isnan(windowY))
+            if (!std::isnan(windowX) && !std::isnan(windowY))
             {
                 glfwSetWindowPos(this->window, (int)windowX, (int)windowY);
             }
