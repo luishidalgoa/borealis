@@ -355,8 +355,10 @@ static void gxmnvg__deleteShader(GXMNVGshader *shader) {
 }
 
 static void gxmnvg__getUniforms(GXMNVGshader *shader) {
-    shader->loc[GXMNVG_LOC_VIEWSIZE] = sceGxmProgramFindParameterByName(shader->prog.vert_gxp, "viewSize");
-    shader->loc[GXMNVG_LOC_FRAG] = sceGxmProgramFindParameterByName(shader->prog.frag_gxp, "frag");
+    if (shader->prog.vert_gxp)
+        shader->loc[GXMNVG_LOC_VIEWSIZE] = sceGxmProgramFindParameterByName(shader->prog.vert_gxp, "viewSize");
+    if (shader->prog.frag_gxp)
+        shader->loc[GXMNVG_LOC_FRAG] = sceGxmProgramFindParameterByName(shader->prog.frag_gxp, "frag");
 }
 
 static int gxmnvg__renderCreateTexture(void *uptr, int type, int w, int h, int imageFlags, const unsigned char *data);
@@ -1020,23 +1022,25 @@ static int gxmnvg__renderCreate(void *uptr) {
                                        SCE_GXM_OUTPUT_REGISTER_FORMAT_UCHAR4,
                                        &blendInfo, gxm->shader.prog.vert_gxp,
                                        &gxm->shader.prog.frag));
-
     gxmnvg__getUniforms(&gxm->shader);
 
     GXM_CHECK(gxmCreateFragmentProgram(gxm->gradient_shader.prog.frag_id,
                                        SCE_GXM_OUTPUT_REGISTER_FORMAT_UCHAR4,
                                        &blendInfo, gxm->shader.prog.vert_gxp,
                                        &gxm->gradient_shader.prog.frag));
+    gxmnvg__getUniforms(&gxm->gradient_shader);
 
     GXM_CHECK(gxmCreateFragmentProgram(gxm->img_texture_shader.prog.frag_id,
                                        SCE_GXM_OUTPUT_REGISTER_FORMAT_UCHAR4,
                                        &blendInfo, gxm->shader.prog.vert_gxp,
                                        &gxm->img_texture_shader.prog.frag));
+    gxmnvg__getUniforms(&gxm->img_texture_shader);
 
     GXM_CHECK(gxmCreateFragmentProgram(gxm->text_texture_shader.prog.frag_id,
                                        SCE_GXM_OUTPUT_REGISTER_FORMAT_UCHAR4,
                                        &blendInfo, gxm->shader.prog.vert_gxp,
                                        &gxm->text_texture_shader.prog.frag));
+    gxmnvg__getUniforms(&gxm->text_texture_shader);
 
     GXM_CHECK(gxmCreateFragmentProgram(gxm->depth_shader.prog.frag_id,
                                        SCE_GXM_OUTPUT_REGISTER_FORMAT_UCHAR4,
@@ -1309,28 +1313,42 @@ static int gxmnvg__convertPaint(GXMNVGcontext *gxm, GXMNVGfragUniforms *frag, NV
 static GXMNVGfragUniforms *nvg__fragUniformPtr(GXMNVGcontext *gxm, int i);
 
 static void gxmnvg__setUniforms(GXMNVGcontext *gxm, int uniformOffset, int image) {
+    int need_tex = 0;
     GXMNVGtexture *tex = NULL;
     GXMNVGfragUniforms *frag = nvg__fragUniformPtr(gxm, uniformOffset);
+    SceGxmFragmentProgram *frag_prog;
+    const SceGxmProgramParameter *frag_loc;
 
     switch((int)frag->type) {
         case NSVG_SHADER_FILLIMG:
-            gxmnvg__setFragmentProgram(gxm, gxm->img_texture_shader.prog.frag);
+            frag_prog = gxm->img_texture_shader.prog.frag;
+            frag_loc = gxm->img_texture_shader.loc[GXMNVG_LOC_FRAG];
+            need_tex = 1;
             break;
         case NSVG_SHADER_IMG:
-            gxmnvg__setFragmentProgram(gxm, gxm->text_texture_shader.prog.frag);
+            frag_prog = gxm->text_texture_shader.prog.frag;
+            frag_loc = gxm->text_texture_shader.loc[GXMNVG_LOC_FRAG];
+            need_tex = 1;
             break;
         case NSVG_SHADER_FILLGRAD:
-            gxmnvg__setFragmentProgram(gxm, gxm->gradient_shader.prog.frag);
+            frag_prog = gxm->gradient_shader.prog.frag;
+            frag_loc = gxm->gradient_shader.loc[GXMNVG_LOC_FRAG];
             break;
         default:
-            gxmnvg__setFragmentProgram(gxm, gxm->shader.prog.frag);
+            frag_prog = gxm->shader.prog.frag;
+            frag_loc = gxm->shader.loc[GXMNVG_LOC_FRAG];
             break;
     }
 
+    gxmnvg__setFragmentProgram(gxm, frag_prog);
+
     void *buffer;
     sceGxmReserveFragmentDefaultUniformBuffer(gxm->context, &buffer);
-    sceGxmSetUniformDataF(buffer, gxm->shader.loc[GXMNVG_LOC_FRAG], 0, sizeof(float) * NANOVG_GXM_UNIFORMARRAY_SIZE,
+    sceGxmSetUniformDataF(buffer, frag_loc, 0, sizeof(float) * NANOVG_GXM_UNIFORMARRAY_SIZE,
                           (const float *) frag->uniformArray);
+
+    if (!need_tex)
+        return;
 
     if (image != 0) {
         tex = gxmnvg__findTexture(gxm, image);
@@ -1377,10 +1395,6 @@ static void gxmnvg__fill(GXMNVGcontext *gxm, GXMNVGcall *call) {
 
         sceGxmSetCullMode(gxm->context, SCE_GXM_CULL_CW);
         sceGxmSetTwoSidedEnable(gxm->context, SCE_GXM_TWO_SIDED_DISABLED);
-
-
-        // Enable color output
-        gxmnvg__setFragmentProgram(gxm, gxm->shader.prog.frag);
     }
 
     // Draw anti-aliased pixels
@@ -1448,8 +1462,6 @@ static void gxmnvg__convexFillStencil(GXMNVGcontext *gxm, GXMNVGcall *call) {
         gxmDrawArrays(gxm, SCE_GXM_PRIMITIVE_TRIANGLE_FAN, paths[i].fillOffset, paths[i].fillCount);
     }
 
-    // Enable color output
-    gxmnvg__setFragmentProgram(gxm, gxm->shader.prog.frag);
     sceGxmSetFrontStencilRef(gxm_internal.context, 0);
     sceGxmSetBackStencilRef(gxm_internal.context, 0);
     gxmnvg__stencilFunc(gxm, SCE_GXM_STENCIL_FUNC_EQUAL,
@@ -1471,9 +1483,6 @@ static void gxmnvg__convexFillStencilClear(GXMNVGcontext *gxm, GXMNVGcall *call)
     for (i = 0; i < npaths; i++) {
         gxmDrawArrays(gxm, SCE_GXM_PRIMITIVE_TRIANGLE_FAN, paths[i].fillOffset, paths[i].fillCount);
     }
-
-    // Enable color output
-    gxmnvg__setFragmentProgram(gxm, gxm->shader.prog.frag);
 
     gxmnvg__disableStencilTest(gxm);
 }
@@ -1516,9 +1525,6 @@ static void gxmnvg__stroke(GXMNVGcontext *gxm, GXMNVGcall *call) {
 
             for (i = 0; i < npaths; i++)
                 gxmDrawArrays(gxm, SCE_GXM_PRIMITIVE_TRIANGLE_STRIP, paths[i].strokeOffset, paths[i].strokeCount);
-
-            // Enable color output
-            gxmnvg__setFragmentProgram(gxm, gxm->shader.prog.frag);
 
             gxmnvg__disableStencilTest(gxm);
         }
@@ -1602,7 +1608,8 @@ static void gxmnvg__renderFlush(void *uptr) {
     if (gxm->ncalls > 0) {
         // Setup require GXM state.
         sceGxmSetVertexProgram(gxm->context, gxm->shader.prog.vert);
-        gxmnvg__setFragmentProgram(gxm, gxm->shader.prog.frag);
+        // Reset fragment program to ensure it will be set at least once per frame.
+        gxm->boundFragmentProgram = NULL;
 
         sceGxmSetCullMode(gxm->context, SCE_GXM_CULL_CW);
         sceGxmSetTwoSidedEnable(gxm->context, SCE_GXM_TWO_SIDED_DISABLED);
