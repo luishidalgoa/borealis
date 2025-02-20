@@ -271,7 +271,6 @@ SDLVideoContext::SDLVideoContext(std::string windowTitle, uint32_t windowWidth, 
     // Load OpenGL routines using glad
     gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress);
 #endif
-    SDL_GL_SetSwapInterval(VideoContext::swapInterval);
 
     Logger::info("sdl: GL Vendor: {}", (const char*)glGetString(GL_VENDOR));
     Logger::info("sdl: GL Renderer: {}", (const char*)glGetString(GL_RENDERER));
@@ -299,6 +298,8 @@ SDLVideoContext::SDLVideoContext(std::string windowTitle, uint32_t windowWidth, 
     {
         brls::fatal("sdl: unable to init nanovg");
     }
+
+    setSwapInterval(VideoContext::swapInterval);
 
     // Setup window state
     int width, height;

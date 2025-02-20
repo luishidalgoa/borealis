@@ -72,6 +72,8 @@ SwitchVideoContext::SwitchVideoContext()
     this->nvgContext = nvgCreateDk(&*this->renderer, NVG_ANTIALIAS | NVG_STENCIL_STROKES);
 
     Application::setWindowSize(this->framebufferWidth, this->framebufferHeight);
+
+    setSwapInterval(VideoContext::swapInterval);
 }
 
 void SwitchVideoContext::createFramebufferResources()

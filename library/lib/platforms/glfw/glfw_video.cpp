@@ -331,7 +331,6 @@ GLFWVideoContext::GLFWVideoContext(const std::string& windowTitle, uint32_t wind
     glfwMakeContextCurrent(window);
     // Load OpenGL routines using glad
     gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
-    glfwSwapInterval(VideoContext::swapInterval);
 
     Logger::info("glfw: GL Vendor: {}", (const char*)glGetString(GL_VENDOR));
     Logger::info("glfw: GL Renderer: {}", (const char*)glGetString(GL_RENDERER));
@@ -368,6 +367,8 @@ GLFWVideoContext::GLFWVideoContext(const std::string& windowTitle, uint32_t wind
         glfwTerminate();
         return;
     }
+
+    setSwapInterval(VideoContext::swapInterval);
 
     // Setup window state
     int width, height;
