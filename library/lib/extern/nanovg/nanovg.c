@@ -2667,10 +2667,11 @@ int nvgTextGlyphPositions(NVGcontext* ctx, float x, float y, const char* string,
 }
 
 enum NVGcodepointType {
-	NVG_SPACE,
+	NVG_CONTROL,
 	NVG_NEWLINE,
 	NVG_CHAR,
 	NVG_CJK_CHAR,
+    NVG_SPACE,
 };
 
 int nvgTextBreakLines(NVGcontext* ctx, const char* string, const char* end, float breakRowWidth, NVGtextRow* rows, int maxRows)
@@ -2693,7 +2694,7 @@ int nvgTextBreakLines(NVGcontext* ctx, const char* string, const char* end, floa
 	const char* breakEnd = NULL;
 	float breakWidth = 0;
 	float breakMaxX = 0;
-	int type = NVG_SPACE, ptype = NVG_NEWLINE;
+	int type = NVG_CONTROL, ptype = NVG_CONTROL;
 	unsigned int pcodepoint = 0;
 
 	if (maxRows == 0) return 0;
@@ -2726,22 +2727,20 @@ int nvgTextBreakLines(NVGcontext* ctx, const char* string, const char* end, floa
 			case 11:		// \v
 			case 12:		// \f
 			case 0x00a0:	// NBSP
-				type = NVG_SPACE;
+				type = NVG_CONTROL;
 				break;
 			case 10:		// \n
-				type = pcodepoint == 13 ? NVG_SPACE : NVG_NEWLINE;
+				type = pcodepoint == 13 ? NVG_CONTROL : NVG_NEWLINE;
 				break;
 			case 13:		// \r
-				type = pcodepoint == 10 ? NVG_SPACE : NVG_NEWLINE;
+				type = pcodepoint == 10 ? NVG_CONTROL : NVG_NEWLINE;
 				break;
 			case 0x0085:	// NEL
 				type = NVG_NEWLINE;
 				break;
             case 32:
-                if (ptype != NVG_NEWLINE) {
-                     type = NVG_SPACE;
-                     break;
-                }
+                type = NVG_SPACE;
+                break;
 			default:
 				if ((iter.codepoint >= 0x4E00 && iter.codepoint <= 0x9FFF) ||
 					(iter.codepoint >= 0x3000 && iter.codepoint <= 0x30FF) ||
@@ -2778,7 +2777,7 @@ int nvgTextBreakLines(NVGcontext* ctx, const char* string, const char* end, floa
 		} else {
 			if (rowStart == NULL) {
 				// Skip white space until the beginning of the line
-				if (type == NVG_CHAR || type == NVG_CJK_CHAR) {
+				if (type == NVG_CHAR || type == NVG_CJK_CHAR || type == NVG_SPACE) {
 					// The current char is the row so far
 					rowStartX = iter.x;
 					rowStart = iter.str;
@@ -2798,28 +2797,30 @@ int nvgTextBreakLines(NVGcontext* ctx, const char* string, const char* end, floa
 				float nextWidth = iter.nextx - rowStartX;
 
 				// track last non-white space character
-				if (type == NVG_CHAR || type == NVG_CJK_CHAR) {
+				if (type == NVG_CHAR || type == NVG_CJK_CHAR || type == NVG_SPACE) {
 					rowEnd = iter.next;
 					rowWidth = iter.nextx - rowStartX;
 					rowMaxX = q.x1 - rowStartX;
 				}
 				// track last end of a word
-				if (((ptype == NVG_CHAR || ptype == NVG_CJK_CHAR) && type == NVG_SPACE) ||
-                    (ptype == NVG_CJK_CHAR && type == NVG_CHAR) || type == NVG_CJK_CHAR) {
+				if (((ptype == NVG_CHAR || ptype == NVG_CJK_CHAR || ptype == NVG_SPACE) && type == NVG_CONTROL) ||
+                    ((ptype == NVG_CJK_CHAR || ptype == NVG_SPACE) && type == NVG_CHAR) ||
+                    type == NVG_CJK_CHAR || type == NVG_SPACE) {
 					breakEnd = iter.str;
 					breakWidth = rowWidth;
 					breakMaxX = rowMaxX;
 				}
 				// track last beginning of a word
-				if ((ptype == NVG_SPACE && (type == NVG_CHAR || type == NVG_CJK_CHAR)) ||
-                    (ptype == NVG_CJK_CHAR && type == NVG_CHAR) || type == NVG_CJK_CHAR) {
+				if (((type == NVG_CHAR || type == NVG_CJK_CHAR || type == NVG_SPACE) && ptype == NVG_CONTROL) ||
+                    ((ptype == NVG_CJK_CHAR || ptype == NVG_SPACE) && type == NVG_CHAR) ||
+                    type == NVG_CJK_CHAR || type == NVG_SPACE) {
 					wordStart = iter.str;
 					wordStartX = iter.x;
 					wordMinX = q.x0;
 				}
 
 				// Break to new line when a character is beyond break width.
-				if ((type == NVG_CHAR || type == NVG_CJK_CHAR) && nextWidth > breakRowWidth) {
+				if ((type == NVG_CHAR || type == NVG_CJK_CHAR || type == NVG_SPACE) && nextWidth > breakRowWidth) {
 					// The run length is too long, need to break to new line.
 					if (breakEnd == rowStart) {
 						// The current word is longer than the row length, just break it from here.
