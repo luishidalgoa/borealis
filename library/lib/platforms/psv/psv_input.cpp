@@ -87,20 +87,10 @@ void PsvInputManager::updateControllerState(ControllerState* state, int controll
     state->buttons[BUTTON_LB] = pad.buttons & SCE_CTRL_L2;
     state->buttons[BUTTON_RB] = pad.buttons & SCE_CTRL_R2;
 
-    if (Application::isSwapInputKeys())
-    {
-        state->buttons[BUTTON_A] = pad.buttons & SCE_CTRL_CROSS;
-        state->buttons[BUTTON_B] = pad.buttons & SCE_CTRL_CIRCLE;
-        state->buttons[BUTTON_X] = pad.buttons & SCE_CTRL_SQUARE;
-        state->buttons[BUTTON_Y] = pad.buttons & SCE_CTRL_TRIANGLE;
-    }
-    else
-    {
-        state->buttons[BUTTON_A] = pad.buttons & SCE_CTRL_CIRCLE;
-        state->buttons[BUTTON_B] = pad.buttons & SCE_CTRL_CROSS;
-        state->buttons[BUTTON_X] = pad.buttons & SCE_CTRL_TRIANGLE;
-        state->buttons[BUTTON_Y] = pad.buttons & SCE_CTRL_SQUARE;
-    }
+    state->buttons[BUTTON_A] = pad.buttons & SCE_CTRL_CROSS;
+    state->buttons[BUTTON_B] = pad.buttons & SCE_CTRL_CIRCLE;
+    state->buttons[BUTTON_X] = pad.buttons & SCE_CTRL_SQUARE;
+    state->buttons[BUTTON_Y] = pad.buttons & SCE_CTRL_TRIANGLE;
 
     state->axes[LEFT_X]  = pad.lx / 255.0f - 1.0f;
     state->axes[LEFT_Y]  = pad.ly / 255.0f - 1.0f;
