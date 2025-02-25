@@ -17,8 +17,9 @@
     limitations under the License.
 */
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
 #include <yoga/YGNode.h>
 #include <yoga/event/event.h>
 
@@ -1069,8 +1070,8 @@ void Application::setWindowSize(int width, int height)
 
     // Rescale UI
     Application::windowScale   = (float)width / (float)ORIGINAL_WINDOW_WIDTH;
-    Application::contentWidth  = ORIGINAL_WINDOW_WIDTH;
-    Application::contentHeight = (unsigned)roundf((float)height / Application::windowScale);
+    Application::contentWidth  = (float)ORIGINAL_WINDOW_WIDTH;
+    Application::contentHeight = std::ceil((float)height / Application::windowScale);
 
     for (Activity* activity : Application::activitiesStack)
         activity->onWindowSizeChanged();
