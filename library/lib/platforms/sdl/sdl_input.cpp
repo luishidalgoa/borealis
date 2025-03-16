@@ -645,9 +645,8 @@ void SDLInputManager::sendRumble(unsigned short controller, unsigned short lowFr
 
 void SDLInputManager::sendRumble(unsigned short controller, unsigned short lowFreqMotor, unsigned short highFreqMotor, unsigned short leftTriggerFreqMotor, unsigned short rightTriggerFreqMotor)
 {
-    if (controllers.find(controller) == controllers.end())
-        return;
-    SDL_GameController* c = controllers[controller];
+    if (controllers.size() <= controller) return;
+    SDL_GameController* c = controllers[controller].second;
 
     if (!SDL_GameControllerHasRumble(c)) {
         device_rumble(lowFreqMotor, highFreqMotor);
