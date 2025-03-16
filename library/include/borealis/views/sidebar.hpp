@@ -60,6 +60,7 @@ class SidebarItem : public Box
     void setLabel(std::string label);
 
     void setActive(bool active);
+    bool isActive() const { return active; }
 
     GenericEvent* getActiveEvent();
 
@@ -84,6 +85,11 @@ class Sidebar : public ScrollingFrame
      * when the item becomes active.
      */
     void addItem(std::string label, GenericEvent::Callback focusCallback);
+
+    /**
+     * @return amount of items in sidebar
+     */
+    [[nodiscard]] size_t getItemsSize() const;
 
     SidebarItem* getItem(int position);
 

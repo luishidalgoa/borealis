@@ -182,6 +182,10 @@ void Sidebar::addItem(std::string label, GenericEvent::Callback focusCallback)
     this->contentBox->addView(item);
 }
 
+size_t Sidebar::getItemsSize() const {
+    return contentBox->getChildren().size();
+}
+
 SidebarItem* Sidebar::getItem(int position)
 {
     return dynamic_cast<SidebarItem*>(this->contentBox->getChildren()[position]);
