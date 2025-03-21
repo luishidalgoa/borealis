@@ -58,9 +58,13 @@ using winrt::Windows::UI::ViewManagement::UISettings;
 #include <ifaddrs.h>
 #endif
 
-
 namespace brls
 {
+
+#if PLATFORM_IOS || PLATFORM_TVOS
+extern void ios_openURL(std::string url);
+#endif
+
 #ifdef __WINRT__
 
 const static auto timeout = std::chrono::milliseconds(500);
@@ -929,7 +933,9 @@ void DesktopPlatform::forceEnableGamePlayRecording()
 void DesktopPlatform::openBrowser(std::string url)
 {
     brls::Logger::debug("open url: {}", url);
-#if __SDL2__
+#if PLATFORM_IOS || PLATFORM_TVOS
+    ios_openURL(url);
+#elif __SDL2__
     SDL_OpenURL(url.c_str());
 #elif __APPLE__
     std::string cmd = "open \"" + url + "\"";

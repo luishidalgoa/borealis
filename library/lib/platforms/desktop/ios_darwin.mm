@@ -195,6 +195,12 @@ uint8_t ios_battery_status() {
 #endif
 }
 
+void ios_openURL(std::string url) {
+#if PLATFORM_IOS || PLATFORM_TVOS
+    [UIApplication.sharedApplication openURL:[NSURL URLWithString: [NSString stringWithCString:url.c_str() encoding:NSUTF8StringEncoding]] options:@{} completionHandler:^(BOOL success){}];
+#endif
+}
+
 float ios_battery() {
 #if defined(IOS)
     return UIDevice.currentDevice.batteryLevel;
