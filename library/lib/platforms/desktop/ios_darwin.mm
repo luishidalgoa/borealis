@@ -221,7 +221,6 @@ void init_device_rumble() {
 }
 
 void device_rumble(unsigned short lowFreqMotor, unsigned short highFreqMotor) {
-    init_device_rumble();
     [contextForLowFreqMotor setMotorAmplitude:lowFreqMotor];
     [contextForHighFreqMotor setMotorAmplitude:highFreqMotor];
 }

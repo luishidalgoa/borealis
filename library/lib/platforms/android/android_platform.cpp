@@ -26,7 +26,15 @@
 #include <borealis/core/application.hpp>
 #include <borealis/core/i18n.hpp>
 #include <borealis/core/logger.hpp>
+#include <borealis/core/thread.hpp>
 #include <borealis/platforms/android/android_platform.hpp>
+
+static JavaVM *mJavaVM = NULL;
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
+{
+    mJavaVM = vm;
+    return JNI_VERSION_1_4;
+}
 
 namespace brls
 {
@@ -204,6 +212,51 @@ namespace brls
 
     bool AndroidPlatform::canSetBacklightBrightness() {
         return true;
+    }
+
+    void init_device_rumble() {
+        static bool initialized = false;
+        if (initialized) return;
+        initialized = true;
+
+        auto env = static_cast<JNIEnv*>(SDL_AndroidGetJNIEnv());
+
+        jclass utilsClass = env->FindClass("org/libsdl/app/PlatformUtils");
+        if (utilsClass == nullptr) {
+            return;
+        }
+
+        jmethodID openBrowserMethod = env->GetStaticMethodID(utilsClass, "initDeviceRumble", "()V");
+        if (openBrowserMethod == nullptr) {
+            return;
+        }
+
+        env->CallStaticVoidMethod(utilsClass, openBrowserMethod);
+//        env->DeleteLocalRef(utilsClass);
+    }
+
+    void device_rumble(unsigned short lowFreqMotor, unsigned short highFreqMotor) {
+        init_device_rumble();
+
+        sync([lowFreqMotor, highFreqMotor]() {
+            auto env = static_cast<JNIEnv *>(SDL_AndroidGetJNIEnv());
+            jclass utilsClass = env->FindClass("org/libsdl/app/PlatformUtils");
+            if (utilsClass == nullptr) {
+                return;
+            }
+
+            jmethodID openBrowserMethod = env->GetStaticMethodID(utilsClass, "deviceRumble",
+                                                                 "(SS)V");
+            if (openBrowserMethod == nullptr) {
+                return;
+            }
+
+            auto sLowFreqMotor =  short(float(lowFreqMotor) / 0xFFFF * 0xFF);
+            auto sHighFreqMotor = short(float(highFreqMotor) / 0xFFFF * 0xFF);
+            env->CallStaticVoidMethod(utilsClass, openBrowserMethod, sLowFreqMotor, sHighFreqMotor);
+
+            env->DeleteLocalRef(utilsClass);
+        });
     }
 
 } // namespace brls
