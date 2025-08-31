@@ -250,12 +250,16 @@ void Application::updateFPS()
     }
 }
 
+const ControllerState& Application::getControllerState()
+{
+    return controllerState;
+}
+
 void Application::processInput()
 {
     static ControllerState oldControllerState = {};
 
     // Input
-    static ControllerState controllerState = {};
     std::vector<RawTouchState> rawTouch;
     RawMouseState rawMouse;
 
