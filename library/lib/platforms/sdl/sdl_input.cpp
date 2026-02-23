@@ -557,6 +557,11 @@ void SDLInputManager::updateTouchStates(std::vector<RawTouchState>* states)
 
     for (int deviceID = 0; deviceID < devices; deviceID++)
     {
+#if defined(TVOS)
+        SDL_TouchDeviceType deviceType = SDL_GetTouchDeviceType(deviceID);
+        if (deviceType == SDL_TOUCH_DEVICE_INVALID) continue;
+#endif
+        
         SDL_TouchID device = SDL_GetTouchDevice(deviceID);
         int touchesCount   = SDL_GetNumTouchFingers(device);
         for (int touchID = 0; touchID < touchesCount; touchID++)

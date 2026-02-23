@@ -52,6 +52,8 @@ SDLPlatform::SDLPlatform()
         SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
     }
     SDL_SetHint(SDL_HINT_ACCELEROMETER_AS_JOYSTICK, "0");
+    SDL_SetHint(SDL_HINT_TV_REMOTE_AS_JOYSTICK, "0");
+    SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
 #elif defined(__APPLE__)
     // Same behavior as GLFW, change to the app's Resources directory if run in a ".app" bundle
     // Or to the executable's directory if run from other ways

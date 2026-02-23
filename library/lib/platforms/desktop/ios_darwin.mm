@@ -59,13 +59,13 @@
         CHHapticEvent* hapticEvent = [[CHHapticEvent alloc] initWithEventType:CHHapticEventTypeHapticContinuous parameters:[NSArray arrayWithObject:intensityParameter] relativeTime:0 duration:GCHapticDurationInfinite];
         CHHapticPattern* hapticPattern = [[CHHapticPattern alloc] initWithEvents:[NSArray arrayWithObject:hapticEvent] parameters:[[NSArray alloc] init] error:&error];
         if (error != nil) {
-            NSLog(@"Controller %d: Haptic pattern creation failed: %@", _playerIndex, error);
+            NSLog(@"Controller %ld: Haptic pattern creation failed: %@", static_cast<long>(_playerIndex), error);
             return;
         }
 
         _hapticPlayer = [_hapticEngine createPlayerWithPattern:hapticPattern error:&error];
         if (error != nil) {
-            NSLog(@"Controller %d: Haptic player creation failed: %@", _playerIndex, error);
+            NSLog(@"Controller %ld: Haptic player creation failed: %@", static_cast<long>(_playerIndex), error);
             return;
         }
     }
@@ -73,7 +73,7 @@
     CHHapticDynamicParameter* intensityParameter = [[CHHapticDynamicParameter alloc] initWithParameterID:CHHapticDynamicParameterIDHapticIntensityControl value:amplitude / 65535.0f relativeTime:0];
     [_hapticPlayer sendParameters:[NSArray arrayWithObject:intensityParameter] atTime:CHHapticTimeImmediate error:&error];
     if (error != nil) {
-        NSLog(@"Controller %d: Haptic player parameter update failed: %@", _playerIndex, error);
+        NSLog(@"Controller %ld: Haptic player parameter update failed: %@", static_cast<long>(_playerIndex), error);
         return;
     }
 
@@ -81,7 +81,7 @@
         [_hapticPlayer startAtTime:0 error:&error];
         if (error != nil) {
             _hapticPlayer = nil;
-            NSLog(@"Controller %d: Haptic playback start failed: %@", _playerIndex, error);
+            NSLog(@"Controller %ld: Haptic playback start failed: %@", static_cast<long>(_playerIndex), error);
             return;
         }
 
@@ -102,7 +102,7 @@
     NSError* error;
     [_hapticEngine startAndReturnError:&error];
     if (error != nil) {
-        NSLog(@"Controller %d: Haptic engine failed to start: %@", _playerIndex, error);
+        NSLog(@"Controller %ld: Haptic engine failed to start: %@", static_cast<long>(_playerIndex), error);
         return nil;
     }
 
@@ -113,7 +113,7 @@
             return;
         }
 
-        NSLog(@"Controller %d: Haptic engine stopped: %p", me->_playerIndex, stoppedReason);
+        NSLog(@"Controller %ld: Haptic engine stopped: %ld", static_cast<long>(me->_playerIndex), static_cast<long>(stoppedReason));
         me->_hapticPlayer = nil;
         me->_hapticEngine = nil;
         me->_playing = NO;
@@ -124,7 +124,7 @@
             return;
         }
 
-        NSLog(@"Controller %d: Haptic engine reset", me->_playerIndex);
+        NSLog(@"Controller %ld: Haptic engine reset", static_cast<long>(me->_playerIndex));
         me->_hapticPlayer = nil;
         me->_playing = NO;
         [me->_hapticEngine startAndReturnError:nil];
