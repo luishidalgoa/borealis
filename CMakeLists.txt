@@ -156,14 +156,16 @@ elseif (PLATFORM_IOS)
             "${CMAKE_CURRENT_SOURCE_DIR}/demo/ios/Images.xcassets"
             "${CMAKE_CURRENT_SOURCE_DIR}/demo/ios/iOSBundleInfo.plist.in"
             "borealis"
-            "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_ALTER}")
+            "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_ALTER}"
+            "${VERSION_BUILD}")
 elseif (PLATFORM_TVOS)
     ios_bundle(
             "${CMAKE_CURRENT_SOURCE_DIR}/demo/ios/tvos/Splash.storyboard"
             "${CMAKE_CURRENT_SOURCE_DIR}/demo/ios/Images.xcassets"
             "${CMAKE_CURRENT_SOURCE_DIR}/demo/ios/iOSBundleInfo.plist.in"
             "borealis"
-            "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_ALTER}")
+            "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_ALTER}"
+            "${VERSION_BUILD}")
 endif ()
 
 target_include_directories(${PROJECT_NAME} PRIVATE demo ${APP_PLATFORM_INCLUDE})

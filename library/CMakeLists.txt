@@ -287,6 +287,11 @@ if (PLATFORM_SWITCH AND BOREALIS_USE_DEKO3D)
     file(GLOB_RECURSE NANOVG_PLATFORM_SRC ${BOREALIS_PATH}/lib/extern/nanovg/*.cpp)
     list(APPEND BOREALIS_SRC ${NANOVG_PLATFORM_SRC})
 endif ()
+
+if (USE_METAL)
+    list(APPEND BOREALIS_SRC ${BOREALIS_PATH}/lib/extern/nanovg/metal/nanovg_mtl.m)
+endif()
+
 message(STATUS "BOREALIS_SOURCE: ${BOREALIS_SOURCE}")
 
 foreach (lib ${BOREALIS_SOURCE})

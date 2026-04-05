@@ -52,6 +52,9 @@ extern "C"
 
 #include <borealis/platforms/driver/d3d11.hpp>
 std::unique_ptr<brls::D3D11Context> D3D11_CONTEXT;
+#elif defined(BOREALIS_USE_METAL)
+#include <SDL_metal.h>
+#include <nanovg_mtl.h>
 #endif
 
 #ifdef __SWITCH__
@@ -62,6 +65,10 @@ namespace brls
 {
 
 static double scaleFactor = 1.0;
+
+#ifdef BOREALIS_USE_METAL
+static SDL_MetalView metalView = nullptr;
+#endif
 
 static void sdlWindowFramebufferSizeCallback(SDL_Window* window, int width, int height)
 {
@@ -79,6 +86,11 @@ static void sdlWindowFramebufferSizeCallback(SDL_Window* window, int width, int 
 #else
     glViewport(0, 0, fWidth, fHeight);
 #endif
+#elif defined(BOREALIS_USE_METAL)
+    SDL_Metal_GetDrawableSize(window, &fWidth, &fHeight);
+    scaleFactor = fWidth * 1.0 / width;
+    fWidth      = width;
+    fHeight     = height;
 #elif defined(BOREALIS_USE_D3D11)
     fWidth      = width;
     fHeight     = height;
@@ -242,6 +254,8 @@ SDLVideoContext::SDLVideoContext(std::string windowTitle, uint32_t windowWidth, 
     SDL_SetHint(SDL_HINT_VIDEO_X11_FORCE_EGL, "1");
 #endif
     windowFlags |= SDL_WINDOW_OPENGL;
+#elif defined(BOREALIS_USE_METAL)
+    windowFlags |= SDL_WINDOW_METAL;
 #endif
     if (VideoContext::FULLSCREEN)
     {
@@ -280,6 +294,12 @@ SDLVideoContext::SDLVideoContext(std::string windowTitle, uint32_t windowWidth, 
     // Configure window
     SDL_GLContext context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, context);
+#elif defined(BOREALIS_USE_METAL)
+    metalView = SDL_Metal_CreateView(window);
+    if (!metalView)
+    {
+        fatal("sdl: failed to create metal view");
+    }
 #endif
     SDL_AddEventWatch(sdlWindowEventWatcher, window);
 #ifdef BOREALIS_USE_OPENGL
@@ -307,6 +327,14 @@ SDLVideoContext::SDLVideoContext(std::string windowTitle, uint32_t windowWidth, 
 #else
     this->nvgContext = nvgCreateGL3(NVG_STENCIL_STROKES | NVG_ANTIALIAS);
 #endif
+#elif defined(BOREALIS_USE_METAL)
+    void* metalLayer = SDL_Metal_GetLayer(metalView);
+    if (!metalLayer)
+    {
+        fatal("sdl: failed to get metal layer");
+    }
+
+    this->nvgContext = nvgCreateMTL(metalLayer, NVG_STENCIL_STROKES | NVG_ANTIALIAS);
 #elif defined(BOREALIS_USE_D3D11)
     Logger::info("sdl: USE_D3D11");
     D3D11_CONTEXT    = std::make_unique<D3D11Context>(this->window, windowWidth, windowHeight);
@@ -329,6 +357,10 @@ SDLVideoContext::SDLVideoContext(std::string windowTitle, uint32_t windowWidth, 
     scaleFactor = fWidth * 1.0 / width;
     Application::setWindowSize(fWidth, fHeight);
     glViewport(0, 0, fWidth, fHeight);
+#elif defined(BOREALIS_USE_METAL)
+    SDL_Metal_GetDrawableSize(window, &fWidth, &fHeight);
+    scaleFactor = fWidth * 1.0 / width;
+    Application::setWindowSize(width, height);
 #elif defined(BOREALIS_USE_D3D11)
     scaleFactor      = D3D11_CONTEXT->getScaleFactor();
     fWidth           = width;
@@ -401,6 +433,8 @@ void SDLVideoContext::clear(NVGcolor color)
         color.a);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+#elif defined(BOREALIS_USE_METAL)
+    mnvgClearWithColor(this->nvgContext, color);
 #elif defined(BOREALIS_USE_D3D11)
     D3D11_CONTEXT->clear(nvgRGBAf(
         color.r,
@@ -442,6 +476,8 @@ SDLVideoContext::~SDLVideoContext()
 #else
             nvgDeleteGL3(this->nvgContext);
 #endif
+#elif defined(BOREALIS_USE_METAL)
+            nvgDeleteMTL(this->nvgContext);
 #elif defined(BOREALIS_USE_D3D11)
             nvgDeleteD3D11(this->nvgContext);
             D3D11_CONTEXT = nullptr;
@@ -452,6 +488,13 @@ SDLVideoContext::~SDLVideoContext()
     {
         Logger::error("Cannot delete nvg Context");
     }
+#ifdef BOREALIS_USE_METAL
+    if (metalView)
+    {
+        SDL_Metal_DestroyView(metalView);
+        metalView = nullptr;
+    }
+#endif
     SDL_DestroyWindow(this->window);
     SDL_Quit();
 }
