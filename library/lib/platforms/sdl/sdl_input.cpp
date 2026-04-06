@@ -22,7 +22,7 @@
 namespace brls
 {
 
-#if defined(PLATFORM_IOS) || defined(PLATFORM_ANDROID)
+#if defined(PLATFORM_IOS) || defined(PLATFORM_VISIONOS) || defined(PLATFORM_ANDROID)
 extern void init_device_rumble();
 extern void device_rumble(unsigned short lowFreqMotor, unsigned short highFreqMotor);
 #else

@@ -174,7 +174,15 @@
 namespace brls {
 
 ThemeVariant ios_theme() {
-    if (UIScreen.mainScreen.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark)
+    UIUserInterfaceStyle userInterfaceStyle = UIUserInterfaceStyleUnspecified;
+
+#if PLATFORM_VISIONOS
+    userInterfaceStyle = UITraitCollection.currentTraitCollection.userInterfaceStyle;
+#else
+    userInterfaceStyle = UIScreen.mainScreen.traitCollection.userInterfaceStyle;
+#endif
+
+    if (userInterfaceStyle == UIUserInterfaceStyleDark)
         return ThemeVariant::DARK;
     else
         return ThemeVariant::LIGHT;
@@ -196,7 +204,7 @@ uint8_t ios_battery_status() {
 }
 
 void ios_openURL(std::string url) {
-#if PLATFORM_IOS || PLATFORM_TVOS
+#if PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_VISIONOS
     [UIApplication.sharedApplication openURL:[NSURL URLWithString: [NSString stringWithCString:url.c_str() encoding:NSUTF8StringEncoding]] options:@{} completionHandler:^(BOOL success){}];
 #endif
 }

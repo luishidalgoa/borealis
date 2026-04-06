@@ -35,7 +35,7 @@
 #include <shellapi.h>
 #include <winioctl.h>
 #include <ntddvdeo.h>
-#elif IOS || TVOS
+#elif IOS || TVOS || VISIONOS
 #elif __APPLE__
 #include <IOKit/ps/IOPSKeys.h>
 #include <IOKit/ps/IOPowerSources.h>
@@ -61,7 +61,7 @@ using winrt::Windows::UI::ViewManagement::UISettings;
 namespace brls
 {
 
-#if PLATFORM_IOS || PLATFORM_TVOS
+#if PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_VISIONOS
 extern void ios_openURL(std::string url);
 #endif
 
@@ -135,7 +135,7 @@ int win32_wlan_quality()
     }
     return quality;
 }
-#elif IOS || TVOS
+#elif IOS || TVOS || VISIONOS
 extern ThemeVariant ios_theme();
 extern uint8_t ios_battery_status();
 extern float ios_battery();
@@ -933,7 +933,7 @@ void DesktopPlatform::forceEnableGamePlayRecording()
 void DesktopPlatform::openBrowser(std::string url)
 {
     brls::Logger::debug("open url: {}", url);
-#if PLATFORM_IOS || PLATFORM_TVOS
+#if PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_VISIONOS
     ios_openURL(url);
 #elif __SDL2__
     SDL_OpenURL(url.c_str());
