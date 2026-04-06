@@ -964,9 +964,7 @@ enum MNVGTarget mnvgTarget() {
     id<MTLDevice> device = MTLCreateSystemDefaultDevice();
     _metalLayer.device = device;
   }
-#if TARGET_OS_OSX
   _metalLayer.opaque = NO;
-#endif  // TARGET_OS_OSX
 
   // Loads shaders from pre-compiled metal library..
   NSError* error;
