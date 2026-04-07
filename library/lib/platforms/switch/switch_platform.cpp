@@ -305,12 +305,12 @@ std::string SwitchPlatform::getHomeDirectory(std::string appName)
 
 SwitchPlatform::~SwitchPlatform()
 {
+    appletUnhook(&applet_hook_cookie);
+
     delete this->audioPlayer;
     delete this->inputManager;
     delete this->videoContext;
     delete this->imeManager;
-
-    appletUnhook(&applet_hook_cookie);
 }
 
 } // namespace brls
