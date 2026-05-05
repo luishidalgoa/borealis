@@ -421,6 +421,10 @@ SDLInputManager::SDLInputManager(SDL_Window* window)
     }
 
     SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
+#if defined(__APPLE__) && !defined(PLATFORM_IOS) && !defined(PLATFORM_TVOS) && !defined(PLATFORM_VISIONOS)
+    SDL_SetHint(SDL_HINT_MOUSE_RELATIVE_MODE_WARP, "0");
+    SDL_SetHint(SDL_HINT_MOUSE_RELATIVE_SYSTEM_SCALE, "1");
+#endif
 
     int controllersCount = SDL_NumJoysticks();
     brls::Logger::info("joystick num: {}", controllersCount);
@@ -604,8 +608,15 @@ void SDLInputManager::updateMouseStates(RawMouseState* state)
 void SDLInputManager::setPointerLock(bool lock)
 {
     pointerLocked = lock;
+    pointerOffset       = { 0, 0 };
+    pointerOffsetBuffer = { 0, 0 };
+
+    if (SDL_SetRelativeMouseMode(lock ? SDL_TRUE : SDL_FALSE) < 0)
+    {
+        brls::Logger::warning("sdl: failed to set relative mouse mode: {}", SDL_GetError());
+    }
+
     SDL_ShowCursor(lock ? SDL_FALSE : SDL_TRUE);
-//    SDL_SetHint(SDL_HINT_IOS_HIDE_HOME_INDICATOR, lock ? "1" : "0");
 }
 
 void SDLInputManager::runloopStart()
@@ -644,13 +655,9 @@ void SDLInputManager::sendRumble(unsigned short controller, unsigned short lowFr
 
 void SDLInputManager::updateMouseMotion(SDL_MouseMotionEvent event)
 {
-    if (pointerLocked && SDL_ShowCursor(SDL_QUERY) == SDL_DISABLE)
+    if (pointerLocked)
     {
         getMouseCusorOffsetChanged()->fire(Point(float(event.xrel), float(event.yrel)));
-
-        int width, height;
-        SDL_GetWindowSize(window, &width, &height);
-        SDL_WarpMouseInWindow(window, width / 2, height / 2);
     }
 }
 
