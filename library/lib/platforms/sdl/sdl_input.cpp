@@ -421,6 +421,7 @@ SDLInputManager::SDLInputManager(SDL_Window* window)
     }
 
     SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
+    SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "0");
 #if defined(__APPLE__) && !defined(PLATFORM_IOS) && !defined(PLATFORM_TVOS) && !defined(PLATFORM_VISIONOS)
     SDL_SetHint(SDL_HINT_MOUSE_RELATIVE_MODE_WARP, "0");
     SDL_SetHint(SDL_HINT_MOUSE_RELATIVE_SYSTEM_SCALE, "1");
