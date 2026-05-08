@@ -203,6 +203,14 @@ class Application
     static std::string* getCommonFooter();
 
     inline static float windowScale;
+    inline static float maximumUIScale = 0.0f;
+
+    /**
+     * Caps how large the UI is allowed to grow relative to the design size.
+     * Set to 0 to disable the cap.
+     */
+    static void setMaximumUIScale(float scale);
+    static float getMaximumUIScale();
 
     /**
      * Sets whether BUTTON_START will globally be used to close the application.
