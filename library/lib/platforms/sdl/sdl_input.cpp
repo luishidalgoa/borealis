@@ -384,9 +384,13 @@ static int sdlEventWatcher(void* data, SDL_Event* event)
     else if (event->type == SDL_CONTROLLERDEVICEREMOVED)
     {
         Logger::info("Controller disconnected: {}", event->cdevice.which);
-        SDL_JoystickID jid = SDL_JoystickGetDeviceInstanceID(event->cdevice.which);
+        SDL_JoystickID jid = event->cdevice.which;
         controllers.erase(std::remove_if(controllers.begin(), controllers.end(), [jid](auto x) {
-            return x.first == jid;
+            if (x.first != jid)
+                return false;
+
+            SDL_GameControllerClose(x.second);
+            return true;
         }), controllers.end());
     }
     else if (event->type == SDL_MOUSEBUTTONDOWN)
@@ -426,6 +430,8 @@ SDLInputManager::SDLInputManager(SDL_Window* window)
     SDL_SetHint(SDL_HINT_MOUSE_RELATIVE_MODE_WARP, "0");
     SDL_SetHint(SDL_HINT_MOUSE_RELATIVE_SYSTEM_SCALE, "1");
 #endif
+
+    SDL_GameControllerUpdate();
 
     int controllersCount = SDL_NumJoysticks();
     brls::Logger::info("joystick num: {}", controllersCount);
@@ -473,10 +479,10 @@ void SDLInputManager::updateUnifiedControllerState(ControllerState* state)
     for (float& axe : state->axes)
         axe = 0;
 
-    for (auto& c : controllers)
+    for (size_t index = 0; index < controllers.size(); index++)
     {
         ControllerState localState {};
-        updateControllerState(&localState, c.first);
+        updateControllerState(&localState, index);
 
         for (size_t i = 0; i < _BUTTON_MAX; i++)
             state->buttons[i] |= localState.buttons[i];
