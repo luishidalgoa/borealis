@@ -73,6 +73,9 @@ if (UNIX AND NOT APPLE AND NOT USE_SDL2)
 endif ()
 
 if (PLATFORM_DESKTOP)
+    find_package(Threads REQUIRED)
+    list(APPEND BRLS_PLATFORM_LIBS Threads::Threads)
+
     if (USE_SDL2)
         if (USE_SYSTEM_SDL2)
             find_package(SDL2 REQUIRED)

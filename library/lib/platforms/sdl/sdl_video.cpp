@@ -183,6 +183,17 @@ SDLVideoContext::SDLVideoContext(std::string windowTitle, uint32_t windowWidth, 
     PVRSRVCreateVirtualAppHint(&hint);
 #endif
 
+#ifdef _WIN32
+    if (!SDL_GetHint(SDL_HINT_WINDOWS_DPI_AWARENESS))
+    {
+        SDL_SetHint(SDL_HINT_WINDOWS_DPI_AWARENESS, "permonitorv2");
+    }
+    if (!SDL_GetHint(SDL_HINT_WINDOWS_DPI_SCALING))
+    {
+        SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
+    }
+#endif
+
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
         Logger::error("sdl: failed to initialize");
