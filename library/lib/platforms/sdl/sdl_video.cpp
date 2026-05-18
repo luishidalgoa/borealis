@@ -70,6 +70,24 @@ static double scaleFactor = 1.0;
 static SDL_MetalView metalView = nullptr;
 #endif
 
+#if defined(BOREALIS_USE_D3D11)
+static void sdlGetWindowPixelSize(SDL_Window* window, int* width, int* height)
+{
+#if SDL_VERSION_ATLEAST(2, 26, 0)
+    SDL_GetWindowSizeInPixels(window, width, height);
+#else
+    SDL_GetWindowSize(window, width, height);
+
+    if (D3D11_CONTEXT != nullptr)
+    {
+        const double currentScale = D3D11_CONTEXT->getScaleFactor();
+        *width                    = static_cast<int>(std::lround(*width * currentScale));
+        *height                   = static_cast<int>(std::lround(*height * currentScale));
+    }
+#endif
+}
+#endif
+
 static void sdlWindowFramebufferSizeCallback(SDL_Window* window, int width, int height)
 {
     if (!width || !height)
@@ -92,9 +110,8 @@ static void sdlWindowFramebufferSizeCallback(SDL_Window* window, int width, int 
     fWidth      = width;
     fHeight     = height;
 #elif defined(BOREALIS_USE_D3D11)
-    fWidth      = width;
-    fHeight     = height;
-    scaleFactor = D3D11_CONTEXT->getScaleFactor();
+    sdlGetWindowPixelSize(window, &fWidth, &fHeight);
+    scaleFactor = fWidth * 1.0 / width;
     D3D11_CONTEXT->onFramebufferSize(fWidth, fHeight);
 #endif
 
@@ -373,9 +390,8 @@ SDLVideoContext::SDLVideoContext(std::string windowTitle, uint32_t windowWidth, 
     scaleFactor = fWidth * 1.0 / width;
     Application::setWindowSize(width, height);
 #elif defined(BOREALIS_USE_D3D11)
-    scaleFactor      = D3D11_CONTEXT->getScaleFactor();
-    fWidth           = width;
-    fHeight          = height;
+    sdlGetWindowPixelSize(window, &fWidth, &fHeight);
+    scaleFactor      = fWidth * 1.0 / width;
     Application::setWindowSize(fWidth, fHeight);
     D3D11_CONTEXT->onFramebufferSize(fWidth, fHeight);
 #endif
@@ -519,6 +535,13 @@ SDL_Window* SDLVideoContext::getSDLWindow()
 {
     return this->window;
 }
+
+#ifdef BOREALIS_USE_D3D11
+D3D11Context* SDLVideoContext::getD3D11Context()
+{
+    return D3D11_CONTEXT.get();
+}
+#endif
 
 void SDLVideoContext::fullScreen(bool fs)
 {

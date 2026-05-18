@@ -48,6 +48,7 @@ class D3D11Context
     bool onFramebufferSize(int width, int height, bool init = false);
 
     ID3D11Device* getDevice() { return this->device; }
+    ID3D11DeviceContext* getDeviceContext() { return this->deviceContext; }
 
     IDXGISwapChain* getSwapChain() { return this->swapChain; }
 

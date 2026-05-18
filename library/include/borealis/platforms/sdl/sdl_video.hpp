@@ -23,6 +23,10 @@
 namespace brls
 {
 
+#ifdef BOREALIS_USE_D3D11
+class D3D11Context;
+#endif
+
 // SDL Video Context
 class SDLVideoContext : public VideoContext
 {
@@ -40,6 +44,10 @@ class SDLVideoContext : public VideoContext
     void fullScreen(bool fs) override;
 
     SDL_Window* getSDLWindow();
+
+  #ifdef BOREALIS_USE_D3D11
+    D3D11Context* getD3D11Context();
+  #endif
 
     double getScaleFactor() override;
 

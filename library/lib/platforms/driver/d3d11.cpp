@@ -20,6 +20,31 @@
 namespace brls
 {
 
+namespace
+{
+
+const char* driverTypeName(D3D_DRIVER_TYPE type)
+{
+    switch (type)
+    {
+        case D3D_DRIVER_TYPE_HARDWARE:
+            return "HARDWARE";
+        case D3D_DRIVER_TYPE_WARP:
+            return "WARP";
+        case D3D_DRIVER_TYPE_REFERENCE:
+            return "REFERENCE";
+        case D3D_DRIVER_TYPE_SOFTWARE:
+            return "SOFTWARE";
+        case D3D_DRIVER_TYPE_NULL:
+            return "NULL";
+        case D3D_DRIVER_TYPE_UNKNOWN:
+        default:
+            return "UNKNOWN";
+    }
+}
+
+}
+
 static const int SwapChainBufferCount    = 2;
 static const DXGI_SAMPLE_DESC sampleDesc = { 1, 0 };
 
@@ -79,13 +104,23 @@ bool D3D11Context::initDX(HWND hWnd, IUnknown* coreWindow, int width, int height
         D3D_FEATURE_LEVEL_9_1, // Direct3D 9.1  SM 2
     };
 
+    D3D_DRIVER_TYPE selectedDriverType = D3D_DRIVER_TYPE_UNKNOWN;
+
     for (size_t driver = 0; driver < ARRAYSIZE(driverAttempts); driver++)
     {
+        UINT deviceFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+    #ifdef D3D11_CREATE_DEVICE_VIDEO_SUPPORT
+        if (driverAttempts[driver] == D3D_DRIVER_TYPE_HARDWARE)
+        {
+            deviceFlags |= D3D11_CREATE_DEVICE_VIDEO_SUPPORT;
+        }
+    #endif
+
         hr = D3D11CreateDevice(
             nullptr,
             driverAttempts[driver],
             nullptr,
-            0,
+            deviceFlags,
             levelAttempts,
             ARRAYSIZE(levelAttempts),
             D3D11_SDK_VERSION,
@@ -95,6 +130,7 @@ bool D3D11Context::initDX(HWND hWnd, IUnknown* coreWindow, int width, int height
 
         if (SUCCEEDED(hr))
         {
+            selectedDriverType = driverAttempts[driver];
             break;
         }
     }
@@ -109,6 +145,34 @@ bool D3D11Context::initDX(HWND hWnd, IUnknown* coreWindow, int width, int height
     if (SUCCEEDED(hr))
     {
         hr = dxgiAdapter->GetParent(IID_PPV_ARGS(&dxgiFactory));
+    }
+
+    if (SUCCEEDED(hr))
+    {
+        DXGI_ADAPTER_DESC adapterDesc = {};
+        if (SUCCEEDED(dxgiAdapter->GetDesc(&adapterDesc)))
+        {
+            char adapterDescription[256] = { 0 };
+            WideCharToMultiByte(CP_UTF8,
+                0,
+                adapterDesc.Description,
+                -1,
+                adapterDescription,
+                sizeof(adapterDescription),
+                nullptr,
+                nullptr);
+
+            Logger::info(
+                "D3D11 device created with driver={} adapter='{}' vendor={:#06x} device={:#06x}",
+                driverTypeName(selectedDriverType),
+                adapterDescription,
+                adapterDesc.VendorId,
+                adapterDesc.DeviceId);
+        }
+        else
+        {
+            Logger::info("D3D11 device created with driver={}", driverTypeName(selectedDriverType));
+        }
     }
 
     if (SUCCEEDED(hr))

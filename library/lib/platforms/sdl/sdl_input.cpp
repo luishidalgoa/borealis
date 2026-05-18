@@ -598,8 +598,13 @@ void SDLInputManager::updateMouseStates(RawMouseState* state)
     state->middleButton = getMouseButtonState(SDL_BUTTON_MIDDLE);
     state->rightButton  = getMouseButtonState(SDL_BUTTON_RIGHT);
 
-#if defined(BOREALIS_USE_D3D11) || defined(BOREALIS_USE_METAL)
-    // These backends report pointer coordinates in logical window space.
+#if defined(BOREALIS_USE_D3D11)
+    // D3D11 keeps the app framebuffer in pixel space while SDL reports the mouse in logical window space.
+    double scaleFactor = brls::Application::getPlatform()->getVideoContext()->getScaleFactor();
+    state->position.x  = x * scaleFactor / Application::windowScale;
+    state->position.y  = y * scaleFactor / Application::windowScale;
+#elif defined(BOREALIS_USE_METAL)
+    // Metal keeps pointer coordinates in logical window space.
     state->position.x = x / Application::windowScale;
     state->position.y = y / Application::windowScale;
 #else
