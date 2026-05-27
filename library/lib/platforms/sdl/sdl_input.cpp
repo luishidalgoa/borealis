@@ -440,7 +440,21 @@ SDLInputManager::SDLInputManager(SDL_Window* window)
     {
         SDL_JoystickID jid = SDL_JoystickGetDeviceInstanceID(i);
         Logger::info("sdl: joystick {}: \"{}\"", jid, SDL_JoystickNameForIndex(i));
-        controllers.push_back({ jid, SDL_GameControllerOpen(i) });
+
+        if (!SDL_IsGameController(i))
+        {
+            Logger::warning("sdl: joystick {} is not a game controller, skipping", jid);
+            continue;
+        }
+
+        SDL_GameController* controller = SDL_GameControllerOpen(i);
+        if (controller == nullptr)
+        {
+            Logger::warning("sdl: failed to open controller {}: {}", jid, SDL_GetError());
+            continue;
+        }
+
+        controllers.push_back({ jid, controller });
     }
 
     SDL_AddEventWatch(sdlEventWatcher, this->window);
@@ -533,6 +547,7 @@ void SDLInputManager::updateControllerState(ControllerState* state, int controll
     if (controllers.size() <= controller) return;
 
     SDL_GameController* c = controllers[controller].second;
+    if (c == nullptr || !SDL_GameControllerGetAttached(c)) return;
 
     for (size_t i = 0; i < SDL_GAMEPAD_BUTTON_MAX; i++)
     {
@@ -641,7 +656,17 @@ void SDLInputManager::runloopStart()
 void SDLInputManager::sendRumble(unsigned short controller, unsigned short lowFreqMotor, unsigned short highFreqMotor)
 {
     if (controllers.size() <= controller) return;
+
+#if defined(PLATFORM_ANDROID)
+    if (SDL_IsAndroidTV())
+    {
+        device_rumble(lowFreqMotor, highFreqMotor);
+        return;
+    }
+#endif
+
     SDL_GameController* c = controllers[controller].second;
+    if (c == nullptr || !SDL_GameControllerGetAttached(c)) return;
 
     if (!SDL_GameControllerHasRumble(c)) {
         device_rumble(lowFreqMotor, highFreqMotor);
@@ -654,7 +679,17 @@ void SDLInputManager::sendRumble(unsigned short controller, unsigned short lowFr
 void SDLInputManager::sendRumble(unsigned short controller, unsigned short lowFreqMotor, unsigned short highFreqMotor, unsigned short leftTriggerFreqMotor, unsigned short rightTriggerFreqMotor)
 {
     if (controllers.size() <= controller) return;
+
+#if defined(PLATFORM_ANDROID)
+    if (SDL_IsAndroidTV())
+    {
+        device_rumble(lowFreqMotor, highFreqMotor);
+        return;
+    }
+#endif
+
     SDL_GameController* c = controllers[controller].second;
+    if (c == nullptr || !SDL_GameControllerGetAttached(c)) return;
 
     if (!SDL_GameControllerHasRumble(c)) {
         device_rumble(lowFreqMotor, highFreqMotor);
