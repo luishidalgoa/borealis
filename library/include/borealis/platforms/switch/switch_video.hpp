@@ -57,6 +57,7 @@ class SwitchVideoContext : public VideoContext
     dk::Queue getQueue();
 
     dk::Image* getFramebuffer();
+    dk::Image* getDepthBuffer();
 
     int allocateImageIndex();
     bool freeImageIndex(int index);

@@ -300,6 +300,11 @@ dk::Image* SwitchVideoContext::getFramebuffer()
     return &framebuffers[imageSlot];
 }
 
+dk::Image* SwitchVideoContext::getDepthBuffer()
+{
+    return &depthBuffer;
+}
+
 int SwitchVideoContext::allocateImageIndex() { return renderer->AllocateImageIndex(); }
 
 bool SwitchVideoContext::freeImageIndex(int index) { return renderer->FreeImageIndex(index); }
