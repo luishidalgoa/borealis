@@ -48,22 +48,44 @@ void BooleanCell::setOn(bool on, bool animated)
 {
     this->state = on;
 
-    if (animated)
-    {
-        scale.stop();
-        scale.reset(1);
-        scale.addStep(0.8f, 100, EasingFunction::quadraticOut);
-        scale.addStep(1, 100, EasingFunction::quadraticIn);
-        scale.setTickCallback([this]
-            { this->scaleTick(); });
-        scale.setEndCallback([this](bool finished)
-            { if (finished) updateUI(); });
-        scale.start();
-    }
-    else
+    // Cancel any previous bounce without letting its completion callback
+    // mutate the view during a new state change.
+    scale.setEndCallback([](bool finished) {});
+    scale.setTickCallback([]() {});
+    scale.stop();
+    scale.reset(1.0f);
+    detail->setFontSize(baseDetailTextSize);
+
+    if (!animated)
     {
         updateUI();
+        return;
     }
+
+    scale.addStep(0.8f, 60, EasingFunction::quadraticOut);
+    scale.setTickCallback([this] {
+        this->scaleTick();
+    });
+    scale.setEndCallback([this](bool finished) {
+        if (!finished)
+            return;
+
+        updateUI();
+
+        scale.reset(0.8f);
+        scale.addStep(1.0f, 60, EasingFunction::quadraticIn);
+        scale.setTickCallback([this] {
+            this->scaleTick();
+        });
+        scale.setEndCallback([this](bool finished) {
+            if (!finished)
+                return;
+
+            detail->setFontSize(baseDetailTextSize);
+        });
+        scale.start();
+    });
+    scale.start();
 }
 
 
