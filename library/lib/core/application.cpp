@@ -24,6 +24,7 @@
 #include <yoga/event/event.h>
 
 #include <algorithm>
+#include <cctype>
 #include <borealis/core/application.hpp>
 #include <borealis/core/font.hpp>
 #include <borealis/core/i18n.hpp>
@@ -54,6 +55,8 @@
 #include <borealis/views/debug_layer.hpp>
 #include <stdexcept>
 #include <string>
+#include <string_view>
+#include <utility>
 
 #ifndef YG_ENABLE_EVENTS
 #error Please enable Yoga events with the YG_ENABLE_EVENTS define
@@ -68,6 +71,33 @@
 
 namespace brls
 {
+
+namespace
+{
+
+std::string normalizeUrlScheme(std::string_view scheme)
+{
+    if (const size_t schemeEnd = scheme.find(':'); schemeEnd != std::string_view::npos)
+        scheme = scheme.substr(0, schemeEnd);
+
+    std::string normalized;
+    normalized.reserve(scheme.size());
+    for (const char ch : scheme)
+        normalized.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(ch))));
+
+    return normalized;
+}
+
+std::string getUrlScheme(std::string_view url)
+{
+    const size_t schemeEnd = url.find(':');
+    if (schemeEnd == std::string_view::npos || schemeEnd == 0)
+        return "";
+
+    return normalizeUrlScheme(url.substr(0, schemeEnd));
+}
+
+} // namespace
 
 bool Application::init()
 {
@@ -179,6 +209,8 @@ bool Application::internalMainLoop()
         Application::exit();
         return false;
     }
+
+    Application::processUrlOpenQueue();
 
     // Mouse and touch
     Application::processInput();
@@ -1280,6 +1312,60 @@ VoidEvent* Application::getWindowShouldCloseEvent()
 Event<bool>* Application::getWindowFocusChangedEvent()
 {
     return &Application::windowFocusChangedEvent;
+}
+
+void Application::registerUrlOpenHandler(std::string scheme, UrlOpenCallback callback)
+{
+    scheme = normalizeUrlScheme(scheme);
+    if (scheme.empty())
+    {
+        Logger::warning("Application: ignored URL open handler with empty scheme");
+        return;
+    }
+
+    std::lock_guard lock(Application::urlOpenMutex);
+    if (callback)
+        Application::urlOpenHandlers[scheme] = std::move(callback);
+    else
+        Application::urlOpenHandlers.erase(scheme);
+}
+
+void Application::notifyUrlOpen(std::string url)
+{
+    if (url.empty())
+        return;
+
+    std::lock_guard lock(Application::urlOpenMutex);
+    Application::pendingUrlOpens.push_back(std::move(url));
+}
+
+void Application::processUrlOpenQueue()
+{
+    std::vector<std::string> urls;
+    {
+        std::lock_guard lock(Application::urlOpenMutex);
+        urls.swap(Application::pendingUrlOpens);
+    }
+
+    for (const std::string& url : urls)
+    {
+        const std::string scheme = getUrlScheme(url);
+        UrlOpenCallback handler;
+        {
+            std::lock_guard lock(Application::urlOpenMutex);
+            if (auto it = Application::urlOpenHandlers.find(scheme); it != Application::urlOpenHandlers.end())
+                handler = it->second;
+        }
+
+        if (!handler)
+        {
+            Logger::debug("Application: no URL open handler registered for scheme '{}'", scheme);
+            continue;
+        }
+
+        if (!handler(url))
+            Logger::debug("Application: URL open handler did not consume URL '{}'", url);
+    }
 }
 
 int Application::getFont(std::string fontName)

@@ -21,6 +21,8 @@
 #include <borealis/core/i18n.hpp>
 #include <borealis/core/logger.hpp>
 #include <borealis/platforms/sdl/sdl_platform.hpp>
+#include <cctype>
+#include <string_view>
 #include <unordered_map>
 
 #if defined(IOS) || defined(TVOS)
@@ -33,6 +35,29 @@ static bool isIPad()
     return strncmp(systemInfo.machine, "iPad", 4) == 0;
 }
 #endif
+
+static bool hasURLScheme(std::string_view value)
+{
+    const size_t schemeEnd = value.find(':');
+    if (schemeEnd == std::string_view::npos || schemeEnd == 0)
+        return false;
+
+    if (!std::isalpha(static_cast<unsigned char>(value[0])))
+        return false;
+
+    // Avoid treating Windows paths such as C:\foo as URLs on SDL desktop builds.
+    if (schemeEnd == 1)
+        return false;
+
+    for (size_t i = 1; i < schemeEnd; i++)
+    {
+        const auto ch = static_cast<unsigned char>(value[i]);
+        if (!std::isalnum(ch) && ch != '+' && ch != '-' && ch != '.')
+            return false;
+    }
+
+    return true;
+}
 
 namespace brls
 {
@@ -228,6 +253,18 @@ bool SDLPlatform::processEvent(SDL_Event* event)
         auto* manager = this->inputManager;
         if (manager)
             manager->updateControllerSensorsUpdate(event->csensor);
+    }
+    else if (event->type == SDL_DROPFILE)
+    {
+        if (event->drop.file)
+        {
+            if (hasURLScheme(event->drop.file))
+                brls::Application::notifyUrlOpen(event->drop.file);
+
+            this->otherEvent.fire(event);
+            SDL_free(event->drop.file);
+            event->drop.file = nullptr;
+        }
     }
 #if defined(IOS) || defined(ANDROID)
     else if (event->type == SDL_APP_WILLENTERBACKGROUND)

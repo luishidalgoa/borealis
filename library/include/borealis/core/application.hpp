@@ -30,6 +30,10 @@
 #include <borealis/core/notification_manager.hpp>
 #include <borealis/views/label.hpp>
 #include <deque>
+#include <functional>
+#include <mutex>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 #ifdef __WINRT__
@@ -53,11 +57,13 @@ class DebugLayer;
 class EditTextDialog;
 
 typedef std::function<View*(void)> XMLViewCreator;
+typedef std::function<bool(const std::string&)> UrlOpenCallback;
 
 class Application
 {
   public:
     friend class EditTextDialog;
+    friend class SDLPlatform;
 
     static inline uint32_t ORIGINAL_WINDOW_WIDTH  = 1280;
     static inline uint32_t ORIGINAL_WINDOW_HEIGHT = 720;
@@ -289,6 +295,12 @@ class Application
     static VoidEvent* getWindowShouldCloseEvent();
     static Event<bool>* getWindowFocusChangedEvent();
 
+    /**
+     * Registers a callback that handles URLs for a scheme. The callback should
+     * return true when the URL was consumed.
+     */
+    static void registerUrlOpenHandler(std::string scheme, UrlOpenCallback callback);
+
     static View* getCurrentFocus();
 
     static std::string getTitle();
@@ -446,11 +458,17 @@ class Application
     inline static VoidEvent windowShouldCloseEvent;
     inline static Event<bool> windowFocusChangedEvent;
 
+    inline static std::mutex urlOpenMutex;
+    inline static std::vector<std::string> pendingUrlOpens;
+    inline static std::unordered_map<std::string, UrlOpenCallback> urlOpenHandlers;
+
     inline static std::unordered_map<std::string, XMLViewCreator> xmlViewsRegister;
 
     static void navigate(FocusDirection direction, bool repeating);
 
     static void frame();
+    static void notifyUrlOpen(std::string url);
+    static void processUrlOpenQueue();
     static void clear();
     static void exit();
 
