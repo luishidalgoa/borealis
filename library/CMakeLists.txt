@@ -339,9 +339,9 @@ set_source_files_properties(${BOREALIS_PATH}/lib/platforms/desktop/desktop_darwi
 target_include_directories(borealis PUBLIC ${BOREALIS_INCLUDE})
 target_link_libraries(borealis fmt tweeny yogacore ${BRLS_PLATFORM_LIBS})
 target_compile_options(borealis PUBLIC
-        -DBRLS_RESOURCES=${BRLS_PLATFORM_RESOURCES_PATH}
-        -DYG_ENABLE_EVENTS
-        -ffunction-sections
-        -fdata-sections
+        $<$<COMPILE_LANGUAGE:C,CXX,OBJC,OBJCXX>:-DBRLS_RESOURCES=${BRLS_PLATFORM_RESOURCES_PATH}>
+        $<$<COMPILE_LANGUAGE:C,CXX,OBJC,OBJCXX>:-DYG_ENABLE_EVENTS>
+        $<$<COMPILE_LANGUAGE:C,CXX,OBJC,OBJCXX>:-ffunction-sections>
+        $<$<COMPILE_LANGUAGE:C,CXX,OBJC,OBJCXX>:-fdata-sections>
         ${BRLS_PLATFORM_OPTION}
         )
