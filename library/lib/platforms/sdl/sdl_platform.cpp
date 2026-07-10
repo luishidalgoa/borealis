@@ -68,7 +68,9 @@ SDLPlatform::SDLPlatform()
     // Enable Fullscreen on Android
     VideoContext::FULLSCREEN = true;
     SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
+#if !defined(__SDL3__)
     SDL_SetHint(SDL_HINT_ACCELEROMETER_AS_JOYSTICK, "0");
+#endif
 #elif defined(IOS) || defined(TVOS)
     // Enable Fullscreen on iOS
     VideoContext::FULLSCREEN = true;

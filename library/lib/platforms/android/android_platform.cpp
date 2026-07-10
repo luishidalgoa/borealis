@@ -21,7 +21,7 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include <SDL2/SDL.h>
+#include <borealis/platforms/sdl/sdl.hpp>
 
 #include <borealis/core/application.hpp>
 #include <borealis/core/i18n.hpp>

@@ -73,7 +73,7 @@ jobs:
         if: ${{ matrix.driver == 'gles2' }}
         run: |
           docker run --rm -v $(pwd):/src/ xfangfang/vitasdk_sdl2_gles2:latest \
-            "cmake -B build -G Ninja -DPLATFORM_PSV=ON -DUSE_SYSTEM_SDL2=ON -DCMAKE_BUILD_TYPE=Release && \
+            "cmake -B build -G Ninja -DPLATFORM_PSV=ON -DCMAKE_BUILD_TYPE=Release && \
              cmake --build build"
 
       - name: Build GXM
@@ -151,6 +151,9 @@ jobs:
         uses: actions/checkout@v6
         with:
           submodules: recursive
+      - name: Install SDL2
+        if: ${{ matrix.window.name == 'sdl2' }}
+        run: brew install sdl2
       - name: Build
         run: |
           cmake -B build -DCMAKE_BUILD_TYPE=Release -DPLATFORM_DESKTOP=ON -DBUNDLE_MACOS_APP=ON ${{ matrix.window.cmake }}
@@ -224,7 +227,7 @@ jobs:
         run: |
           sudo apt update -y
           sudo apt install -y --no-install-recommends libdbus-1-dev libxkbcommon-dev \
-            libwayland-dev wayland-protocols xorg-dev
+            libwayland-dev wayland-protocols xorg-dev libsdl2-dev
       - name: Build
         run: |
           cmake -B build -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake }} \

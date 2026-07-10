@@ -763,7 +763,7 @@ void SDLInputManager::sendRumble(unsigned short controller, unsigned short lowFr
 {
     if (controllers.size() <= controller) return;
 
-#if defined(PLATFORM_ANDROID)
+#if defined(PLATFORM_ANDROID) && !defined(__SDL3__)
     if (SDL_IsAndroidTV())
     {
         device_rumble(lowFreqMotor, highFreqMotor);
@@ -792,7 +792,7 @@ void SDLInputManager::sendRumble(unsigned short controller, unsigned short lowFr
 {
     if (controllers.size() <= controller) return;
 
-#if defined(PLATFORM_ANDROID)
+#if defined(PLATFORM_ANDROID) && !defined(__SDL3__)
     if (SDL_IsAndroidTV())
     {
         device_rumble(lowFreqMotor, highFreqMotor);
