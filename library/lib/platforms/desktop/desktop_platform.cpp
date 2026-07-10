@@ -137,6 +137,7 @@ int win32_wlan_quality()
 }
 #elif IOS || TVOS || VISIONOS
 extern ThemeVariant ios_theme();
+extern std::string ios_locale();
 extern uint8_t ios_battery_status();
 extern float ios_battery();
 extern bool darwin_runloop(const std::function<bool()>& runLoopImpl);
@@ -432,7 +433,15 @@ DesktopPlatform::DesktopPlatform()
     if (Platform::APP_LOCALE_DEFAULT == "" || Platform::APP_LOCALE_DEFAULT == LOCALE_AUTO)
     {
         char* langEnv = getenv("BOREALIS_LANG");
-        this->locale  = langEnv ? std::string(langEnv) : LOCALE_DEFAULT;
+        if (langEnv)
+            this->locale = std::string(langEnv);
+#if defined(IOS) || defined(TVOS) || defined(VISIONOS)
+        else
+            this->locale = ios_locale();
+#else
+        else
+            this->locale = LOCALE_DEFAULT;
+#endif
     }
     else
     {

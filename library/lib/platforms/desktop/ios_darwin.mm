@@ -188,6 +188,24 @@ ThemeVariant ios_theme() {
         return ThemeVariant::LIGHT;
 }
 
+std::string ios_locale() {
+    @autoreleasepool {
+        NSString* preferredLocale = NSBundle.mainBundle.preferredLocalizations.firstObject;
+        if (preferredLocale == nil || preferredLocale.length == 0)
+            return LOCALE_DEFAULT;
+
+        preferredLocale = [preferredLocale stringByReplacingOccurrencesOfString:@"_" withString:@"-"];
+        std::string locale = preferredLocale.UTF8String;
+
+        // Apple commonly uses an "en.lproj" bundle while Borealis uses en-US as its default locale.
+        if (locale == "en")
+            locale = LOCALE_EN_US;
+
+        Logger::info("Set app locale from bundle: {}", locale);
+        return locale;
+    }
+}
+
 bool darwin_runloop(const std::function<bool()>& runLoopImpl) {
     @autoreleasepool {
         return runLoopImpl();

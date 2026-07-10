@@ -109,7 +109,9 @@ SDLPlatform::SDLPlatform()
     // Platform impls
     this->audioPlayer = new NullAudioPlayer();
 
-    // override local
+    // Apple mobile uses the bundle's preferred localization, including the per-app language setting.
+#if !defined(IOS) && !defined(TVOS) && !defined(VISIONOS)
+    // Override the generic desktop locale with SDL's preferred locale.
     if (Platform::APP_LOCALE_DEFAULT == LOCALE_AUTO)
     {
 #if defined(__SDL3__)
@@ -146,6 +148,7 @@ SDLPlatform::SDLPlatform()
         }
         SDL_free(locales);
     }
+#endif
 }
 
 void SDLPlatform::createWindow(std::string windowTitle, uint32_t windowWidth, uint32_t windowHeight, float windowXPos, float windowYPos)
