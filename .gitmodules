@@ -4,3 +4,6 @@
 [submodule "library/lib/extern/SDL"]
 	path = library/lib/extern/SDL
 	url = https://github.com/XITRIX/SDL.git
+[submodule "library/lib/extern/SDL3"]
+	path = library/lib/extern/SDL3
+	url = https://github.com/libsdl-org/SDL.git

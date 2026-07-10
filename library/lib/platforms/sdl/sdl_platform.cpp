@@ -76,23 +76,31 @@ SDLPlatform::SDLPlatform()
     {
         SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
     }
+#if !defined(__SDL3__)
     SDL_SetHint(SDL_HINT_ACCELEROMETER_AS_JOYSTICK, "0");
+#endif
     SDL_SetHint(SDL_HINT_TV_REMOTE_AS_JOYSTICK, "0");
     SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
     SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "0");
 #elif defined(__APPLE__)
     // Same behavior as GLFW, change to the app's Resources directory if run in a ".app" bundle
     // Or to the executable's directory if run from other ways
-    char *base_path = SDL_GetBasePath();
+    const char *base_path = SDL_GetBasePath();
     if (base_path)
     {
         chdir(base_path);
-        SDL_free(base_path);
+#if !defined(__SDL3__)
+        SDL_free((void*)base_path);
+#endif
     }
 #endif
 
     // Init sdl
+#if defined(__SDL3__)
+    if (!SDL_Init(SDL_INIT_EVENTS))
+#else
     if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_TIMER) < 0)
+#endif
     {
         Logger::error("sdl: failed to initialize");
         return;
@@ -104,8 +112,14 @@ SDLPlatform::SDLPlatform()
     // override local
     if (Platform::APP_LOCALE_DEFAULT == LOCALE_AUTO)
     {
+#if defined(__SDL3__)
+        SDL_Locale** locales = SDL_GetPreferredLocales(nullptr);
+        SDL_Locale* locale = locales ? locales[0] : nullptr;
+#else
         SDL_Locale* locales = SDL_GetPreferredLocales();
-        if (locales != nullptr && locales->language != nullptr)
+        SDL_Locale* locale = locales;
+#endif
+        if (locale != nullptr && locale->language != nullptr)
         {
             std::unordered_map<std::string, std::string> sdl2brls = {
                 { "zh_CN", LOCALE_ZH_HANS },
@@ -115,10 +129,10 @@ SDLPlatform::SDLPlatform()
                 { "it_IT", LOCALE_IT },
                 { "ru", LOCALE_RU }
             };
-            std::string lang = std::string { locales->language };
-            if (locales->country)
+            std::string lang = std::string { locale->language };
+            if (locale->country)
             {
-                lang += "_" + std::string { locales->country };
+                lang += "_" + std::string { locale->country };
             }
             if (sdl2brls.count(lang) > 0)
             {
@@ -129,8 +143,8 @@ SDLPlatform::SDLPlatform()
                 this->locale = LOCALE_EN_US;
             }
             brls::Logger::info("Set app locale: {}", this->locale);
-            SDL_free(locales);
         }
+        SDL_free(locales);
     }
 }
 
@@ -139,7 +153,7 @@ void SDLPlatform::createWindow(std::string windowTitle, uint32_t windowWidth, ui
     appTitle = windowTitle;
     this->videoContext = new SDLVideoContext(windowTitle, windowWidth, windowHeight, windowXPos, windowYPos);
     this->inputManager = new SDLInputManager(this->videoContext->getSDLWindow());
-    this->imeManager   = new SDLImeManager(&this->otherEvent);
+    this->imeManager   = new SDLImeManager(&this->otherEvent, this->videoContext->getSDLWindow());
 }
 
 void SDLPlatform::restoreWindow()
@@ -149,7 +163,11 @@ void SDLPlatform::restoreWindow()
 
 void SDLPlatform::setWindowAlwaysOnTop(bool enable)
 {
+#if defined(__SDL3__)
+    SDL_SetWindowAlwaysOnTop(this->videoContext->getSDLWindow(), enable);
+#else
     SDL_SetWindowAlwaysOnTop(this->videoContext->getSDLWindow(), enable ? SDL_TRUE : SDL_FALSE);
+#endif
 }
 
 void SDLPlatform::setWindowSize(uint32_t windowWidth, uint32_t windowHeight)
@@ -215,7 +233,11 @@ std::string SDLPlatform::pasteFromClipboard()
 
 std::string SDLPlatform::getName()
 {
+#if defined(__SDL3__)
+    return "SDL3";
+#else
     return "SDL";
+#endif
 }
 
 bool SDLPlatform::processEvent(SDL_Event* event)
@@ -252,18 +274,31 @@ bool SDLPlatform::processEvent(SDL_Event* event)
     {
         auto* manager = this->inputManager;
         if (manager)
-            manager->updateControllerSensorsUpdate(event->csensor);
+            manager->updateControllerSensorsUpdate(
+#if defined(__SDL3__)
+                event->gsensor
+#else
+                event->csensor
+#endif
+            );
     }
     else if (event->type == SDL_DROPFILE)
     {
-        if (event->drop.file)
+#if defined(__SDL3__)
+        const char* droppedFile = event->drop.data;
+#else
+        const char* droppedFile = event->drop.file;
+#endif
+        if (droppedFile)
         {
-            if (hasURLScheme(event->drop.file))
-                brls::Application::notifyUrlOpen(event->drop.file);
+            if (hasURLScheme(droppedFile))
+                brls::Application::notifyUrlOpen(droppedFile);
 
             this->otherEvent.fire(event);
+#if !defined(__SDL3__)
             SDL_free(event->drop.file);
             event->drop.file = nullptr;
+#endif
         }
     }
 #if defined(IOS) || defined(ANDROID)

@@ -24,8 +24,8 @@
 #include <memory>
 #include <sstream>
 
-#ifdef __SDL2__
-#include <SDL2/SDL_misc.h>
+#if defined(__SDL2__) || defined(__SDL3__)
+#include <borealis/platforms/sdl/sdl.hpp>
 #endif
 
 #ifdef _WIN32
@@ -186,7 +186,7 @@ int darwin_get_powerstate()
     CFRelease(blob);
     return capacity;
 }
-#elif __SDL2__
+#elif defined(__SDL2__) || defined(__SDL3__)
 #elif defined(__linux__)
 // Thanks to: https://github.com/videolan/vlc/blob/master/modules/misc/inhibit/dbus.c
 enum INHIBIT_TYPE
@@ -449,7 +449,7 @@ DesktopPlatform::DesktopPlatform()
     this->fontLoader = new DesktopFontLoader();
     this->imeManager = new DesktopImeManager();
 
-#if defined(__linux__) && !defined(__SDL2__)
+#if defined(__linux__) && !defined(__SDL2__) && !defined(__SDL3__)
     probeInhibitor(dbus_conn.get());
 #endif
 }
@@ -632,7 +632,7 @@ void DesktopPlatform::disableScreenDimming(bool disable, const std::string& reas
 
     if (disable)
     {
-#ifdef __SDL2__
+#if defined(__SDL2__) || defined(__SDL3__)
 #elif defined(__linux__)
         inhibitCookie = dbusInhibit(dbus_conn.get(), app, reason);
 #elif __APPLE__
@@ -648,7 +648,7 @@ void DesktopPlatform::disableScreenDimming(bool disable, const std::string& reas
     }
     else
     {
-#ifdef __SDL2__
+#if defined(__SDL2__) || defined(__SDL3__)
 #elif defined(__linux__)
         if (inhibitCookie != 0)
             dbusUnInhibit(dbus_conn.get(), inhibitCookie);
@@ -935,7 +935,7 @@ void DesktopPlatform::openBrowser(std::string url)
     brls::Logger::debug("open url: {}", url);
 #if PLATFORM_IOS || PLATFORM_TVOS || PLATFORM_VISIONOS
     ios_openURL(url);
-#elif __SDL2__
+#elif defined(__SDL2__) || defined(__SDL3__)
     SDL_OpenURL(url.c_str());
 #elif __APPLE__
     std::string cmd = "open \"" + url + "\"";

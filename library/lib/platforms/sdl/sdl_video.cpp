@@ -53,7 +53,11 @@ extern "C"
 #include <borealis/platforms/driver/d3d11.hpp>
 std::unique_ptr<brls::D3D11Context> D3D11_CONTEXT;
 #elif defined(BOREALIS_USE_METAL)
+#if defined(__SDL3__)
+#include <SDL3/SDL_metal.h>
+#else
 #include <SDL_metal.h>
+#endif
 #include <nanovg_mtl.h>
 #endif
 
@@ -95,7 +99,11 @@ static void sdlWindowFramebufferSizeCallback(SDL_Window* window, int width, int 
 
     int fWidth, fHeight;
 #ifdef BOREALIS_USE_OPENGL
+#if defined(__SDL3__)
+    SDL_GetWindowSizeInPixels(window, &fWidth, &fHeight);
+#else
     SDL_GL_GetDrawableSize(window, &fWidth, &fHeight);
+#endif
     scaleFactor = fWidth * 1.0 / width;
 #if defined(ANDROID)
     // On Android, doing this is to ensure that glViewport is called from the main thread
@@ -105,7 +113,11 @@ static void sdlWindowFramebufferSizeCallback(SDL_Window* window, int width, int 
     glViewport(0, 0, fWidth, fHeight);
 #endif
 #elif defined(BOREALIS_USE_METAL)
+#if defined(__SDL3__)
+    SDL_GetWindowSizeInPixels(window, &fWidth, &fHeight);
+#else
     SDL_Metal_GetDrawableSize(window, &fWidth, &fHeight);
+#endif
     scaleFactor = fWidth * 1.0 / width;
     fWidth      = width;
     fHeight     = height;
@@ -135,8 +147,31 @@ static void sdlWindowPositionCallback(SDL_Window* window, int windowXPos, int wi
     }
 }
 
+#if defined(__SDL3__)
+static bool sdlWindowEventWatcher(void* data, SDL_Event* event)
+#else
 static int sdlWindowEventWatcher(void* data, SDL_Event* event)
+#endif
 {
+#if defined(__SDL3__)
+    if (event->type == SDL_EVENT_WINDOW_RESIZED || event->type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED)
+    {
+        SDL_Window* win = SDL_GetWindowFromID(event->window.windowID);
+        if (win == (SDL_Window*)data)
+        {
+            int width, height;
+            SDL_GetWindowSize(win, &width, &height);
+            sdlWindowFramebufferSizeCallback(win, width, height);
+        }
+    }
+    else if (event->type == SDL_EVENT_WINDOW_MOVED)
+    {
+        SDL_Window* win = SDL_GetWindowFromID(event->window.windowID);
+        if (win == (SDL_Window*)data)
+            sdlWindowPositionCallback(win, event->window.data1, event->window.data2);
+    }
+    return true;
+#else
     if (event->type == SDL_WINDOWEVENT)
     {
         SDL_Window* win = SDL_GetWindowFromID(event->window.windowID);
@@ -161,6 +196,7 @@ static int sdlWindowEventWatcher(void* data, SDL_Event* event)
         }
     }
     return 0;
+#endif
 }
 
 SDLVideoContext::SDLVideoContext(std::string windowTitle, uint32_t windowWidth, uint32_t windowHeight, float windowXPos, float windowYPos)
@@ -211,14 +247,22 @@ SDLVideoContext::SDLVideoContext(std::string windowTitle, uint32_t windowWidth, 
     }
 #endif
 
+#if defined(__SDL3__)
+    if (!SDL_Init(SDL_INIT_VIDEO))
+#else
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
+#endif
     {
         Logger::error("sdl: failed to initialize");
         return;
     }
 
     // Create window
+#if defined(__SDL3__)
+    SDL_WindowFlags windowFlags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY;
+#else
     Uint32 windowFlags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
+#endif
 #ifdef BOREALIS_USE_OPENGL
 #ifdef __SWITCH__
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
@@ -279,7 +323,11 @@ SDLVideoContext::SDLVideoContext(std::string windowTitle, uint32_t windowWidth, 
     SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 #endif
 #if defined(USE_EGL)
+#if defined(__SDL3__)
+    SDL_SetHint(SDL_HINT_VIDEO_FORCE_EGL, "1");
+#else
     SDL_SetHint(SDL_HINT_VIDEO_X11_FORCE_EGL, "1");
+#endif
 #endif
     windowFlags |= SDL_WINDOW_OPENGL;
 #elif defined(BOREALIS_USE_METAL)
@@ -290,11 +338,26 @@ SDLVideoContext::SDLVideoContext(std::string windowTitle, uint32_t windowWidth, 
 #ifdef __WINRT__
         windowFlags |= SDL_WINDOW_FULLSCREEN;
 #else
+#if defined(__SDL3__)
+        windowFlags |= SDL_WINDOW_FULLSCREEN;
+#else
         windowFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 #endif
+#endif
     }
+#if !defined(__SDL3__)
     SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
+#endif
 
+#if defined(__SDL3__)
+    this->window = SDL_CreateWindow(windowTitle.c_str(), windowWidth, windowHeight, windowFlags);
+    if (this->window && !std::isnan(windowXPos) && !std::isnan(windowYPos))
+    {
+        SDL_SetWindowPosition(this->window,
+            windowXPos > 0 ? windowXPos : SDL_WINDOWPOS_UNDEFINED,
+            windowYPos > 0 ? windowYPos : SDL_WINDOWPOS_UNDEFINED);
+    }
+#else
     if (std::isnan(windowXPos) || std::isnan(windowYPos))
     {
         this->window = SDL_CreateWindow(windowTitle.c_str(),
@@ -313,6 +376,7 @@ SDLVideoContext::SDLVideoContext(std::string windowTitle, uint32_t windowWidth, 
             windowHeight,
             windowFlags);
     }
+#endif
 
     if (!this->window)
     {
@@ -381,12 +445,20 @@ SDLVideoContext::SDLVideoContext(std::string windowTitle, uint32_t windowWidth, 
 
     int fWidth, fHeight;
 #ifdef BOREALIS_USE_OPENGL
+#if defined(__SDL3__)
+    SDL_GetWindowSizeInPixels(window, &fWidth, &fHeight);
+#else
     SDL_GL_GetDrawableSize(window, &fWidth, &fHeight);
+#endif
     scaleFactor = fWidth * 1.0 / width;
     Application::setWindowSize(fWidth, fHeight);
     glViewport(0, 0, fWidth, fHeight);
 #elif defined(BOREALIS_USE_METAL)
+#if defined(__SDL3__)
+    SDL_GetWindowSizeInPixels(window, &fWidth, &fHeight);
+#else
     SDL_Metal_GetDrawableSize(window, &fWidth, &fHeight);
+#endif
     scaleFactor = fWidth * 1.0 / width;
     Application::setWindowSize(width, height);
 #elif defined(BOREALIS_USE_D3D11)
@@ -489,6 +561,11 @@ double SDLVideoContext::getScaleFactor()
 
 SDLVideoContext::~SDLVideoContext()
 {
+#if defined(__SDL3__)
+    SDL_RemoveEventWatch(sdlWindowEventWatcher, this->window);
+#else
+    SDL_DelEventWatch(sdlWindowEventWatcher, this->window);
+#endif
     try
     {
         if (this->nvgContext)
@@ -545,6 +622,9 @@ D3D11Context* SDLVideoContext::getD3D11Context()
 
 void SDLVideoContext::fullScreen(bool fs)
 {
+#if defined(__SDL3__)
+    SDL_SetWindowFullscreen(this->window, fs);
+#else
 #ifdef __WINRT__
     // win32 会很模糊，而且点击事件貌似也错位了，只给 winrt 使用。
     static unsigned int flag = SDL_WINDOW_FULLSCREEN;
@@ -552,6 +632,7 @@ void SDLVideoContext::fullScreen(bool fs)
     static unsigned int flag = SDL_WINDOW_FULLSCREEN_DESKTOP;
 #endif
     SDL_SetWindowFullscreen(this->window, fs ? flag : 0);
+#endif
 }
 
 } // namespace brls

@@ -35,7 +35,7 @@
 #if defined(BOREALIS_USE_DEKO3D)
 #elif defined(__GLFW__)
 #include <borealis/platforms/glfw/glfw_platform.hpp>
-#elif defined(__SDL2__)
+#elif defined(__SDL2__) || defined(__SDL3__)
 #include <borealis/platforms/sdl/sdl_platform.hpp>
 #endif
 
@@ -52,7 +52,7 @@ Platform* Platform::createPlatform()
     return new PsvPlatform();
 #elif defined(PS4)
     return new Ps4Platform();
-#elif defined(__SDL2__)
+#elif defined(__SDL2__) || defined(__SDL3__)
     return new SDLPlatform();
 #elif defined(__GLFW__)
     return new GLFWPlatform();

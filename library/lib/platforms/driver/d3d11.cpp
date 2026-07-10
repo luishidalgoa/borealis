@@ -54,6 +54,13 @@ D3D11Context::D3D11Context(GLFWwindow* window, int width, int height)
     this->hWnd = glfwGetWin32Window(window);
     this->initDX(this->hWnd, nullptr, width, height);
 }
+#elif defined(__SDL3__)
+D3D11Context::D3D11Context(SDL_Window* window, int width, int height)
+{
+    this->hWnd = static_cast<HWND>(SDL_GetPointerProperty(
+        SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr));
+    this->initDX(this->hWnd, nullptr, width, height);
+}
 #elif defined(__SDL2__)
 D3D11Context::D3D11Context(SDL_Window* window, int width, int height)
 {

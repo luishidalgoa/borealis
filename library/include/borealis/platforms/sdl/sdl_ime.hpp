@@ -18,14 +18,14 @@ limitations under the License.
 
 #include <borealis/core/ime.hpp>
 #include <borealis/core/event.hpp>
-#include <SDL2/SDL.h>
+#include <borealis/platforms/sdl/sdl.hpp>
 
 namespace brls
 {
 class SDLImeManager : public ImeManager
 {
   public:
-    SDLImeManager(Event<SDL_Event*> *event);
+    SDLImeManager(Event<SDL_Event*> *event, SDL_Window* window);
 
     bool openForText(std::function<void(std::string)> f, std::string headerText = "",
         std::string subText = "", int maxStringLength = 32, std::string initialText = "",
@@ -40,6 +40,7 @@ class SDLImeManager : public ImeManager
         std::string subText, size_t maxStringLength = 50, std::string initialText = "");
   private:
     Event<SDL_Event*> *event;
+    SDL_Window* window;
     int cursor;
     std::string inputBuffer;
     bool isEditing = false; // 是否正在编辑文字

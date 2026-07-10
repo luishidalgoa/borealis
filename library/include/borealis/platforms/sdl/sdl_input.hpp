@@ -2,7 +2,7 @@
 
 #include <borealis/core/input.hpp>
 
-#include <SDL2/SDL.h>
+#include <borealis/platforms/sdl/sdl.hpp>
 
 namespace brls
 {
@@ -39,7 +39,11 @@ class SDLInputManager : public InputManager
 
     void updateMouseWheel(SDL_MouseWheelEvent event);
 
+#if defined(__SDL3__)
+    void updateControllerSensorsUpdate(SDL_GamepadSensorEvent event);
+#else
     void updateControllerSensorsUpdate(SDL_ControllerSensorEvent event);
+#endif
 
     void updateKeyboardState(SDL_KeyboardEvent event);
 

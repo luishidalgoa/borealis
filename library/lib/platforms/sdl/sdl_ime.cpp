@@ -33,8 +33,9 @@ __attribute__((weak)) uint32_t vita_ime_type = 0;
 
 namespace brls
 {
-    SDLImeManager::SDLImeManager(Event<SDL_Event*> *event):
+    SDLImeManager::SDLImeManager(Event<SDL_Event*> *event, SDL_Window* window):
     event(event),
+    window(window),
     cursor(-1){}
 
     static int utf8_len(std::string &s) {
@@ -145,10 +146,14 @@ namespace brls
         float scale = Application::windowScale / Application::getPlatform()->getVideoContext()->getScaleFactor();
 #endif
         // 更新输入法条位置
-        dialog->getLayoutEvent()->subscribe([scale](Point p) {
+        dialog->getLayoutEvent()->subscribe([this, scale](Point p) {
 #ifndef PS4
             const SDL_Rect rect = {(int)(p.x* scale), (int)(p.y * scale), 100, 20};
+#if defined(__SDL3__)
+            SDL_SetTextInputArea(this->window, &rect, 0);
+#else
             SDL_SetTextInputRect(&rect);
+#endif
 #endif
         });
 
@@ -224,19 +229,31 @@ namespace brls
 
         // cancel
         dialog->getCancelEvent()->subscribe([this, eventID1]() {
+#if defined(__SDL3__)
+            SDL_StopTextInput(this->window);
+#else
             SDL_StopTextInput();
+#endif
             event->unsubscribe(eventID1);
         });
 
         // submit
         dialog->getSubmitEvent()->subscribe([this, eventID1, cb]() {
+#if defined(__SDL3__)
+            SDL_StopTextInput(this->window);
+#else
             SDL_StopTextInput();
+#endif
             event->unsubscribe(eventID1);
             cb(this->inputBuffer);
             return true;
         });
 
+#if defined(__SDL3__)
+        SDL_StartTextInput(this->window);
+#else
         SDL_StartTextInput();
+#endif
         dialog->open();
     }
 
