@@ -236,7 +236,7 @@ SDLVideoContext::SDLVideoContext(std::string windowTitle, uint32_t windowWidth, 
     PVRSRVCreateVirtualAppHint(&hint);
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__SDL3__)
     if (!SDL_GetHint(SDL_HINT_WINDOWS_DPI_AWARENESS))
     {
         SDL_SetHint(SDL_HINT_WINDOWS_DPI_AWARENESS, "permonitorv2");
