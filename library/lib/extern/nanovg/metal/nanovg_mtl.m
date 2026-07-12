@@ -480,6 +480,14 @@ NVGcontext* nvgCreateMTL(void* metalLayer, int flags) {
 #endif  // TARGET_OS_OSX
   mtl.indexSize = 4;  // MTLIndexTypeUInt32
   mtl.metalLayer = (__bridge CAMetalLayer*)metalLayer;
+#if TARGET_OS_OSX
+  // The Borealis run loop is paced by a display link on macOS. Leaving
+  // CAMetalLayer synchronization enabled adds a second presentation wait that
+  // limits ProMotion displays to 60 FPS.
+  if (@available(macOS 14.0, *)) {
+    mtl.metalLayer.displaySyncEnabled = NO;
+  }
+#endif
 
   ctx = nvgCreateInternal(&params);
   if (ctx == NULL) goto error;
