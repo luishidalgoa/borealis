@@ -29,6 +29,7 @@ extern "C"
 {
 #include <gpu_es4/psp2_pvr_hint.h>
 #include <psp2/kernel/modulemgr.h>
+#include <psp2/kernel/sysmem.h>
 }
 #define NANOVG_GLES2_IMPLEMENTATION
 #elif defined(PS4)
@@ -218,22 +219,43 @@ SDLVideoContext::SDLVideoContext(std::string windowTitle, uint32_t windowWidth, 
     char target_path[MAX_PATH];
     const char* default_path = "app0:module";
 
+    auto logFreeMemory = []()
+    {
+        SceKernelFreeMemorySizeInfo memoryInfo {};
+        memoryInfo.size = sizeof(memoryInfo);
+        int result      = sceKernelGetFreeMemorySize(&memoryInfo);
+        Logger::info("sdl: Vita free memory result=0x{:08x}, user={} KiB, CDRAM={} KiB, phycont={} KiB",
+            static_cast<unsigned int>(result),
+            memoryInfo.size_user / 1024,
+            memoryInfo.size_cdram / 1024,
+            memoryInfo.size_phycont / 1024);
+    };
+    auto loadModule = [](const char* path)
+    {
+        int result = sceKernelLoadStartModule(path, 0, NULL, 0, NULL, NULL);
+        Logger::info("sdl: Vita module {} load result=0x{:08x}", path, static_cast<unsigned int>(result));
+    };
+
+    logFreeMemory();
+
     /* Load Modules */
-    sceKernelLoadStartModule("vs0:sys/external/libfios2.suprx", 0, NULL, 0, NULL, NULL);
-    sceKernelLoadStartModule("vs0:sys/external/libc.suprx", 0, NULL, 0, NULL, NULL);
+    loadModule("vs0:sys/external/libfios2.suprx");
+    loadModule("vs0:sys/external/libc.suprx");
     snprintf(target_path, MAX_PATH, "%s/%s", default_path, "libgpu_es4_ext.suprx");
-    sceKernelLoadStartModule(target_path, 0, NULL, 0, NULL, NULL);
+    loadModule(target_path);
     snprintf(target_path, MAX_PATH, "%s/%s", default_path, "libIMGEGL.suprx");
-    sceKernelLoadStartModule(target_path, 0, NULL, 0, NULL, NULL);
+    loadModule(target_path);
 
     /* Set PVR Hints */
-    PVRSRVInitializeAppHint(&hint);
+    unsigned int initializeHintResult = PVRSRVInitializeAppHint(&hint);
     snprintf(hint.szGLES1, MAX_PATH, "%s/%s", default_path, "libGLESv1_CM.suprx");
     snprintf(hint.szGLES2, MAX_PATH, "%s/%s", default_path, "libGLESv2.suprx");
     snprintf(hint.szWindowSystem, MAX_PATH, "%s/%s", default_path, "libpvrPSP2_WSEGL.suprx");
 
     hint.ui32SwTexOpCleanupDelay = 32000; // Set to 32 milliseconds to prevent a pool of unfreed memory
-    PVRSRVCreateVirtualAppHint(&hint);
+    unsigned int createHintResult = PVRSRVCreateVirtualAppHint(&hint);
+    Logger::info("sdl: Vita PVR hints initialize={}, create={}", initializeHintResult, createHintResult);
+    logFreeMemory();
 #endif
 
 #if defined(_WIN32) && !defined(__SDL3__)
@@ -380,12 +402,23 @@ SDLVideoContext::SDLVideoContext(std::string windowTitle, uint32_t windowWidth, 
 
     if (!this->window)
     {
-        fatal("sdl: failed to create window");
+        fatal("sdl: failed to create window: " + std::string(SDL_GetError()));
     }
 #ifdef BOREALIS_USE_OPENGL
     // Configure window
     SDL_GLContext context = SDL_GL_CreateContext(window);
-    SDL_GL_MakeCurrent(window, context);
+    if (!context)
+    {
+        fatal("sdl: failed to create OpenGL context: " + std::string(SDL_GetError()));
+    }
+#if defined(__SDL3__)
+    if (!SDL_GL_MakeCurrent(window, context))
+#else
+    if (SDL_GL_MakeCurrent(window, context) < 0)
+#endif
+    {
+        fatal("sdl: failed to activate OpenGL context: " + std::string(SDL_GetError()));
+    }
 #elif defined(BOREALIS_USE_METAL)
     metalView = SDL_Metal_CreateView(window);
     if (!metalView)
@@ -400,9 +433,12 @@ SDLVideoContext::SDLVideoContext(std::string windowTitle, uint32_t windowWidth, 
     gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress);
 #endif
 
-    Logger::info("sdl: GL Vendor: {}", (const char*)glGetString(GL_VENDOR));
-    Logger::info("sdl: GL Renderer: {}", (const char*)glGetString(GL_RENDERER));
-    Logger::info("sdl: GL Version: {}", (const char*)glGetString(GL_VERSION));
+    const char* glVendor   = (const char*)glGetString(GL_VENDOR);
+    const char* glRenderer = (const char*)glGetString(GL_RENDERER);
+    const char* glVersion  = (const char*)glGetString(GL_VERSION);
+    Logger::info("sdl: GL Vendor: {}", glVendor ? glVendor : "<unavailable>");
+    Logger::info("sdl: GL Renderer: {}", glRenderer ? glRenderer : "<unavailable>");
+    Logger::info("sdl: GL Version: {}", glVersion ? glVersion : "<unavailable>");
 
     // Initialize nanovg
 #ifdef __PSV__

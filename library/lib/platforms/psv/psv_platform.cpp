@@ -125,7 +125,7 @@ void PsvPlatform::createWindow(std::string windowTitle, uint32_t windowWidth, ui
 #else
     this->videoContext = new SDLVideoContext(windowTitle, windowWidth, windowHeight, windowXPos, windowYPos);
     this->inputManager = new SDLInputManager(this->videoContext->getSDLWindow());
-    this->imeManager   = new SDLImeManager(&this->otherEvent);
+    this->imeManager   = new SDLImeManager(&this->otherEvent, this->videoContext->getSDLWindow());
 #endif
     this->audioPlayer  = new NullAudioPlayer();
 }
