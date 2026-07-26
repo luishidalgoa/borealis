@@ -829,30 +829,31 @@ void SDLInputManager::updateMouseMotion(SDL_MouseMotionEvent event)
 void SDLInputManager::updateMouseWheel(SDL_MouseWheelEvent event)
 {
 #if defined(__SDL3__)
-    const float preciseX = event.x;
-    const float preciseY = event.y;
+    float preciseX = event.x;
+    float preciseY = event.y;
 #else
-    const float preciseX = event.preciseX;
-    const float preciseY = event.preciseY;
+    float preciseX = event.preciseX;
+    float preciseY = event.preciseY;
 #endif
+    if (event.direction == SDL_MOUSEWHEEL_FLIPPED)
+    {
+        preciseX = -preciseX;
+        preciseY = -preciseY;
+    }
+
     if (preciseX == 0.0f && preciseY == 0.0f) return;
 
-//#ifdef APPLE
-    // HACK: Clamp the scroll values on macOS to prevent OS scroll acceleration
-    // from generating wild scroll deltas when scrolling quickly.
-//    event.preciseX = SDL_clamp(event.preciseX, -1.0f, 1.0f);
-//    event.preciseY = SDL_clamp(event.preciseY, -1.0f, 1.0f);
-//#endif
+#if defined(PLATFORM_DESKTOP)
+    constexpr float UI_SCROLL_DISTANCE = 30.0f;
+#else
+    constexpr float UI_SCROLL_DISTANCE = 4.0f;
+#endif
+    this->scrollOffset.x += preciseX * UI_SCROLL_DISTANCE;
+    this->scrollOffset.y += preciseY * UI_SCROLL_DISTANCE;
 
-// #if defined(_WIN32) || defined(__linux__)
-//     self->scrollOffset.x += event.preciseX * 30;
-//     self->scrollOffset.y += event.preciseY * 30;
-// #else
-    this->scrollOffset.x += preciseX * 4;
-    this->scrollOffset.y += preciseY * 4;
-// #endif
-
-    this->getMouseScrollOffsetChanged()->fire(Point(preciseX * 120, preciseY * 120));
+    // Scroll events use wheel units across every backend. Consumers that need
+    // Win32/Moonlight wheel deltas perform the 120-unit conversion themselves.
+    this->getMouseScrollOffsetChanged()->fire(Point(preciseX, preciseY));
 }
 
 #if defined(__SDL3__)
