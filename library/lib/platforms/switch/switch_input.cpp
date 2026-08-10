@@ -115,6 +115,7 @@ SwitchInputManager::SwitchInputManager()
     padInitialize(&this->padStateHandheld, HidNpadIdType_Handheld);
     hidInitializeVibrationDevices(m_vibration_device_handheld, 2, HidNpadIdType_Handheld, HidNpadStyleTag_NpadHandheld);
     padUpdate(&this->padStateHandheld);
+    sendRumbleInternal(m_vibration_device_handheld, m_vibration_values_handheld, 0, 0);
 
     for (int i = 0; i < GAMEPADS_MAX; i++)
     {
@@ -164,7 +165,10 @@ void SwitchInputManager::clearVibration(int controller)
 {
     Logger::debug("Vibration clear #{}", controller);
     hidInitializeVibrationDevices(m_vibration_device_handles[controller], 2, (HidNpadIdType)controller, HidNpadStyleTag_NpadJoyDual);
-    sendRumbleInternal(m_vibration_device_handles[controller], m_vibration_values[controller], 160.0f, 320.0f, 0.0f, 0.0f);
+    // Zero motor strengths. Passing 160/320 here used to mean "default Hz,
+    // zero amplitude" under an older float API; with the current unsigned-short
+    // motor overload those values are strengths and start a continuous rumble.
+    sendRumbleInternal(m_vibration_device_handles[controller], m_vibration_values[controller], 0, 0);
 }
 
 void SwitchInputManager::updateUnifiedControllerState(ControllerState* state)
