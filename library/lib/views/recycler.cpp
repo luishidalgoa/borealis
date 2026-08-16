@@ -237,37 +237,91 @@ void RecyclerFrame::reloadData()
     if (!layouted)
         return;
 
-    auto children = this->contentBox->getChildren();
-    for (auto const& child : children)
+    // reloadData() mutates the child list, and every removeCell()/addCellAt()
+    // invalidates the tree. View::invalidate() bubbles up to the parentless
+    // root and runs YGNodeCalculateLayout() synchronously, whose NodeLayout
+    // events call onLayout() back on this frame; while the frame size is
+    // still settling (startup, sidebar fold) checkWidth() passes there and
+    // reloadData() re-enters mid-mutation, corrupting the children/queue
+    // state (cells inserted twice, queued cells still in the tree). Defer
+    // nested requests and coalesce them into one rerun after this pass.
+    if (mutationDepth > 0)
     {
-        queueReusableCell((RecyclerCell*)child);
-        this->removeCell(child);
+        reloadPending = true;
+        return;
     }
 
-    visibleMin = UINT_MAX;
-    visibleMax = 0;
-
-    renderedFrame            = Rect();
-    renderedFrame.size.width = getWidth();
-
-    setContentOffsetY(0, false);
-
-    if (dataSource)
+    // The rebuild below recycles every cell. If focus sits on one of them it
+    // would be left dangling on a queued instance, whose highlight keeps
+    // drawing at the stale detached position — the visible "shifted focus".
+    // Remember the focused cell's flat index and restore it afterwards.
+    View* focusedCell = nullptr;
+    for (View* view = Application::getCurrentFocus(); view && view != this;
+         view          = view->getParent())
     {
-        cacheCellFrames();
-        Rect frame  = getLocalFrame();
-        int counter = 0;
-        for (int section = 0; section < dataSource->numberOfSections(this); section++)
+        if (view->getParent() == this->contentBox)
         {
-            for (int row = -1; row < dataSource->numberOfRows(this, section); row++)
-            {
-                addCellAt(counter++, true);
-                if (renderedFrame.getMaxY() > frame.getMaxY())
-                    break;
-            }
+            focusedCell = view;
+            break;
+        }
+    }
+    size_t focusedIndex =
+        focusedCell ? *((size_t*)focusedCell->getParentUserData()) : 0;
+
+    mutationDepth++;
+    do
+    {
+        reloadPending = false;
+
+        auto children = this->contentBox->getChildren();
+        for (auto const& child : children)
+        {
+            queueReusableCell((RecyclerCell*)child);
+            this->removeCell(child);
         }
 
-        selectRowAt(defaultCellFocus, false);
+        visibleMin = UINT_MAX;
+        visibleMax = 0;
+
+        renderedFrame            = Rect();
+        renderedFrame.size.width = getWidth();
+
+        setContentOffsetY(0, false);
+
+        if (dataSource)
+        {
+            cacheCellFrames();
+            Rect frame  = getLocalFrame();
+            int counter = 0;
+            for (int section = 0; section < dataSource->numberOfSections(this); section++)
+            {
+                for (int row = -1; row < dataSource->numberOfRows(this, section); row++)
+                {
+                    addCellAt(counter++, true);
+                    if (renderedFrame.getMaxY() > frame.getMaxY())
+                        break;
+                }
+            }
+
+            selectRowAt(defaultCellFocus, false);
+        }
+    } while (reloadPending);
+    mutationDepth--;
+
+    if (focusedCell)
+    {
+        View* target = nullptr;
+        for (View* child : contentBox->getChildren())
+        {
+            if (*((size_t*)child->getParentUserData()) == focusedIndex)
+            {
+                target = child;
+                break;
+            }
+        }
+        // The row is gone (list shrank): hand focus to the frame itself,
+        // whose default focus lands on the selectRowAt() cell above.
+        Application::giveFocus(target ? target : (View*)this);
     }
 }
 
@@ -368,8 +422,10 @@ void RecyclerFrame::cacheCellFrames()
 
 bool RecyclerFrame::checkWidth()
 {
-    float width           = getWidth();
-    static float oldWidth = width;
+    // Per-instance: a function-static width was shared by every recycler, so a
+    // newly shown list with the same width as the previous tab skipped its
+    // first layout (focus highlight sat on the wrong pixels until resize).
+    float width = getWidth();
     if ((int)oldWidth != (int)width && width != 0)
     {
         oldWidth = width;
@@ -381,6 +437,10 @@ bool RecyclerFrame::checkWidth()
 
 void RecyclerFrame::cellsRecyclingLoop()
 {
+    // Same reentrancy guard as reloadData(): removeCell()/addCellAt()
+    // invalidate the recycler, which can synchronously re-enter onLayout()
+    // and request reloadData() while the loops below iterate the child list.
+    mutationDepth++;
     Rect visibleFrame = getVisibleFrame();
 
     while (true)
@@ -437,6 +497,12 @@ void RecyclerFrame::cellsRecyclingLoop()
         int i = visibleMax + 1;
         addCellAt(i, true);
     }
+
+    mutationDepth--;
+    // Draw()-time entry point: a reload deferred above has no outer pass to
+    // pick it up, so run it once we are back out of the mutation.
+    if (reloadPending && mutationDepth == 0)
+        reloadData();
 }
 
 void RecyclerFrame::addCellAt(size_t index, size_t downSide)
@@ -540,6 +606,19 @@ void RecyclerFrame::onLayout()
 
 void RecyclerFrame::draw(NVGcontext* vg, float x, float y, float width, float height, Style style, FrameContext* ctx)
 {
+    // Sidebar collapse (and any other parent-width change) can leave recycled
+    // cells at the previous setWidth: reloadData() from onLayout runs inside
+    // Yoga's NodeLayout callback and the new width does not stick. Sync here,
+    // after layout, so the focus ring matches the row.
+    const float cellW = getWidth() - paddingLeft - paddingRight;
+    if (cellW > 0)
+    {
+        for (View* child : contentBox->getChildren())
+        {
+            if ((int)child->getWidth() != (int)cellW)
+                child->setWidth(cellW);
+        }
+    }
     cellsRecyclingLoop();
     ScrollingFrame::draw(vg, x, y, width, height, style, ctx);
 }

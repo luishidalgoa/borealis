@@ -240,6 +240,13 @@ class RecyclerFrame : public ScrollingFrame
     RecyclerDataSource* dataSource = nullptr;
     bool deleteDataSource          = false;
     bool layouted                  = false;
+    float oldWidth                 = 0;
+
+    // Reentrancy guard for reloadData()/cellsRecyclingLoop(): their
+    // invalidates can synchronously re-enter onLayout() and request another
+    // reload mid-mutation, so nested requests are deferred and coalesced.
+    unsigned mutationDepth = 0;
+    bool reloadPending     = false;
 
     uint32_t visibleMin, visibleMax;
 
