@@ -364,14 +364,23 @@ void RecyclerFrame::selectRowAt(IndexPath indexPath, bool animated)
     size_t count    = 0;
     float offset = 0;
 
+    // cacheFramesData holds one entry per cached cell (a header entry plus
+    // one per row). A section with zero rows caches only its header, and a
+    // focused row beyond the cached set must not read past the vector.
     for (size_t j = 0; j < indexPath.section; j++)
         for (int i = -1; i < (dataSource->numberOfRows(this, j)); i++)
         {
+            if (count >= this->cacheFramesData.size())
+                break;
             offset += this->cacheFramesData[count++].height;
         }
 
     for (int i = -1; i <= indexPath.row; i++)
+    {
+        if (count >= this->cacheFramesData.size())
+            break;
         offset += this->cacheFramesData[count++].height;
+    }
 
     offset -= this->getHeight() / 2;
     this->setContentOffsetY(offset, animated);
