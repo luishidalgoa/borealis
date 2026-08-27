@@ -14,6 +14,8 @@
     limitations under the License.
 */
 
+#include <algorithm>
+
 #include <borealis/core/application.hpp>
 #include <borealis/core/touch/tap_gesture.hpp>
 #include <borealis/views/recycler.hpp>
@@ -273,7 +275,11 @@ void RecyclerFrame::reloadData()
 
 void RecyclerFrame::registerCell(std::string identifier, std::function<RecyclerCell*()> allocation)
 {
-    queueMap.insert(std::make_pair(identifier, new std::vector<RecyclerCell*>()));
+    // map::insert does nothing when the key is already there, so registering
+    // the same identifier twice used to leak the vector built for the call.
+    if (queueMap.find(identifier) == queueMap.end())
+        queueMap.insert(std::make_pair(identifier, new std::vector<RecyclerCell*>()));
+
     allocationMap.insert(std::make_pair(identifier, allocation));
 }
 
@@ -335,7 +341,21 @@ void RecyclerFrame::selectRowAt(IndexPath indexPath, bool animated)
 
 void RecyclerFrame::queueReusableCell(RecyclerCell* cell)
 {
-    queueMap.at(cell->reuseIdentifier)->push_back(cell);
+    std::vector<RecyclerCell*>* queue = queueMap.at(cell->reuseIdentifier);
+
+    // A cell must not end up in the reuse queue twice: ~RecyclerFrame deletes
+    // every pointer it finds there, so a duplicate is a double delete. That is
+    // exactly what an Atmosphere crash report showed on exit -- a virtual call
+    // through a vtable slot read as zero, from the delete loop in the
+    // destructor, on an object that had already been freed.
+    //
+    // This is a guard at the point of damage, not a fix for whatever path
+    // queues the same cell twice; that path has not been found yet. The check
+    // is cheap: a queue holds a handful of cells per reuse identifier.
+    if (std::find(queue->begin(), queue->end(), cell) != queue->end())
+        return;
+
+    queue->push_back(cell);
 }
 
 void RecyclerFrame::cacheCellFrames()
