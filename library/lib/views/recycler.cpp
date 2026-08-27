@@ -353,7 +353,17 @@ void RecyclerFrame::queueReusableCell(RecyclerCell* cell)
     // queues the same cell twice; that path has not been found yet. The check
     // is cheap: a queue holds a handful of cells per reuse identifier.
     if (std::find(queue->begin(), queue->end(), cell) != queue->end())
+    {
+        // Guarding is not understanding. Nothing here explains how the same
+        // cell reaches this function twice, so say so when it happens: the
+        // log is the only way that path will ever be identified, and it is
+        // silent otherwise.
+        Logger::error("RecyclerFrame: cell {} was already queued for reuse "
+                      "under \"{}\" ({} queued) -- dropping the duplicate, "
+                      "which would have been a double delete in the destructor",
+                      cell->describe(), cell->reuseIdentifier, queue->size());
         return;
+    }
 
     queue->push_back(cell);
 }
