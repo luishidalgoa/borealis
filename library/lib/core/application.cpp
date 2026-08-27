@@ -521,9 +521,19 @@ void Application::navigate(FocusDirection direction, bool repeating)
 
     View* currentFocus = Application::currentFocus;
 
-    // Do nothing if there is no current focus
+    // Sin foco no hay desde donde navegar, pero quedarse asi deja la pantalla
+    // muerta al mando. Eso puede pasar ahora que destruir la vista enfocada si
+    // limpia currentFocus (antes quedaba un puntero colgando y se navegaba de
+    // memoria liberada, por casualidad). Se reancla a la actividad de arriba.
     if (!currentFocus)
+    {
+        if (!Application::activitiesStack.empty())
+        {
+            Activity* last = Application::activitiesStack.back();
+            Application::giveFocus(last->getDefaultFocus());
+        }
         return;
+    }
 
     View* nextFocus = nullptr;
 
@@ -629,7 +639,10 @@ bool Application::setInputType(InputType type)
     if (type == InputType::GAMEPAD)
     {
         Application::setDrawCoursor(false);
-        Application::currentFocus->onFocusGained();
+        // currentFocus arranca en nullptr y ahora tambien vuelve a serlo al
+        // destruirse la vista enfocada, asi que esto no puede ir a pelo.
+        if (Application::currentFocus)
+            Application::currentFocus->onFocusGained();
     }
 
     return true;
@@ -881,8 +894,28 @@ void Application::notify(const std::string& text)
 
 void Application::giveFocus(View* view)
 {
+    // Limpiar el foco tiene que limpiarlo. Antes esto caia en la guarda de
+    // abajo, que exige newFocus != nullptr, y currentFocus se quedaba
+    // apuntando a la vista saliente. Como el unico que llama con nullptr es
+    // View::~View, eso dejaba un puntero a memoria liberada que
+    // Application::frame sigue usando cada frame para dibujar el recuadro de
+    // foco (currentFocus->frameHighlight).
+    //
+    // No se llama a onFocusLost sobre la vista saliente en este caso: quien
+    // pasa nullptr es el destructor, con el objeto ya a medio destruir.
+    if (!view)
+    {
+        if (Application::currentFocus)
+        {
+            Application::currentFocus = nullptr;
+            Application::globalFocusChangeEvent.fire(nullptr);
+            Application::globalHintsUpdateEvent.fire();
+        }
+        return;
+    }
+
     View* oldFocus = Application::currentFocus;
-    View* newFocus = view ? view->getDefaultFocus() : nullptr;
+    View* newFocus = view->getDefaultFocus();
 
     if (oldFocus != newFocus && newFocus != nullptr)
     {
